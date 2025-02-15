@@ -7,6 +7,28 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
 import numpy as np
 
+@dataclass(frozen=True)  # Make it immutable for hashing
+class TimeWindow:
+    """Represents a time window for scheduling."""
+    start: int
+    end: int
+    
+    def __contains__(self, time: int) -> bool:
+        """Check if a time point is within this window."""
+        return self.start <= time < self.end
+    
+    def overlaps(self, other: 'TimeWindow') -> bool:
+        """Check if this window overlaps with another."""
+        return not (self.end <= other.start or other.end <= self.start)
+    
+    def duration(self) -> int:
+        """Get the duration of this window."""
+        return self.end - self.start
+    
+    def __hash__(self) -> int:
+        """Make TimeWindow hashable for use as dictionary key."""
+        return hash((self.start, self.end))
+
 @dataclass
 class Task:
     """Represents a task to be scheduled."""
@@ -15,6 +37,25 @@ class Task:
     release_time: int = 0
     deadline: Optional[int] = None
     
+    def get_time_windows(self, horizon: int, window_size: Optional[int] = None) -> List[TimeWindow]:
+        """Get possible time windows for this task."""
+        start_time = max(0, self.release_time)
+        end_time = min(horizon, self.deadline or horizon)
+        
+        windows = []
+        if window_size is None:
+            # Default case: create window at every possible start time
+            for t in range(start_time, end_time - self.duration + 1):
+                windows.append(TimeWindow(t, t + self.duration))
+        else:
+            # Custom window size: strictly align to window size grid
+            t = (start_time // window_size) * window_size  # Align to grid
+            while t + self.duration <= end_time:
+                if t >= start_time:  # Only create window if start time is valid
+                    windows.append(TimeWindow(t, t + self.duration))
+                t += window_size  # Move to next grid point
+        return windows
+
 @dataclass
 class Agent:
     """Represents an agent that can execute tasks."""
@@ -33,10 +74,11 @@ class QUBOScheduler:
     def __init__(self):
         self.tasks: List[Task] = []
         self.agents: List[Agent] = []
-        self._variable_map: Dict[Tuple[str, str, int], int] = {}
-        self._reverse_map: Dict[int, Tuple[str, str, int]] = {}
+        self._variable_map: Dict[Tuple[str, str, TimeWindow], int] = {}
+        self._reverse_map: Dict[int, Tuple[str, str, TimeWindow]] = {}
         self._next_var_index: int = 0
         self._horizon: Optional[int] = None
+        self._window_size: Optional[int] = None
     
     def add_task(self, task: Task) -> None:
         """Add a task to be scheduled."""
@@ -46,32 +88,64 @@ class QUBOScheduler:
         """Add an agent available for task execution."""
         self.agents.append(agent)
     
+    def _optimize_window_size(self) -> int:
+        """Determine optimal window size based on task durations."""
+        if not self.tasks:
+            return 1
+            
+        # Use GCD of task durations as window size to minimize variables
+        durations = [task.duration for task in self.tasks]
+        window_size = durations[0]
+        for d in durations[1:]:
+            window_size = np.gcd(window_size, d)
+        return max(1, window_size)
+    
     def _create_variable_mapping(self, horizon: int) -> None:
-        """Create binary variable mapping for QUBO formulation."""
+        """Create binary variable mapping for QUBO formulation using time windows."""
         self._variable_map.clear()
         self._reverse_map.clear()
         self._next_var_index = 0
         self._horizon = horizon
         
+        # Set window size based on task durations
+        self._window_size = self._optimize_window_size()
+        
+        # Create variables for each task-agent-window combination
         for task in self.tasks:
             for agent in self.agents:
-                start_time = max(0, task.release_time)
-                end_time = min(horizon, task.deadline or horizon)
-                
-                for t in range(start_time, end_time - task.duration + 1):
-                    key = (task.id, agent.id, t)
+                # Use optimized window size for all tasks
+                windows = task.get_time_windows(horizon, window_size=self._window_size)
+                for window in windows:
+                    key = (task.id, agent.id, window)
                     self._variable_map[key] = self._next_var_index
                     self._reverse_map[self._next_var_index] = key
                     self._next_var_index += 1
     
     def get_variable_index(self, task_id: str, agent_id: str, time: int) -> Optional[int]:
         """Get the variable index for a task-agent-time assignment."""
-        key = (task_id, agent_id, time)
-        return self._variable_map.get(key)
+        # Find the task to get its duration
+        task = next((t for t in self.tasks if t.id == task_id), None)
+        if task is None:
+            return None
+            
+        # Check if time point is valid for this task
+        if time + task.duration > self._horizon:
+            return None
+            
+        # Find a window that could contain this time point
+        for key, idx in self._variable_map.items():
+            if (key[0] == task_id and 
+                key[1] == agent_id and 
+                key[2].start <= time < key[2].end):
+                return idx
+        return None
     
     def decode_variable_index(self, index: int) -> Optional[Tuple[str, str, int]]:
         """Decode a variable index back to task-agent-time assignment."""
-        return self._reverse_map.get(index)
+        if index not in self._reverse_map:
+            return None
+        task_id, agent_id, window = self._reverse_map[index]
+        return (task_id, agent_id, window.start)
     
     def _build_task_assignment_constraints(self) -> List[QUBOTerm]:
         """Build QUBO terms for task assignment constraints.
@@ -83,18 +157,16 @@ class QUBOScheduler:
             # Collect all variables for this task
             task_vars = []
             for agent in self.agents:
-                for _, key in self._reverse_map.items():
+                for key, idx in self._variable_map.items():
                     if key[0] == task.id and key[1] == agent.id:
-                        var_idx = self._variable_map[key]
-                        task_vars.append(var_idx)
+                        task_vars.append(idx)
             
             if task_vars:
                 # Add quadratic terms to enforce exactly one assignment
                 for i in task_vars:
+                    terms.append(QUBOTerm(indices=(i,), coefficient=-1.0))  # Linear term
                     for j in task_vars:
-                        if i == j:
-                            terms.append(QUBOTerm(indices=(i,), coefficient=-1.0))  # Linear term
-                        else:
+                        if i < j:  # Only add each pair once
                             terms.append(QUBOTerm(indices=(i, j), coefficient=2.0))  # Quadratic term
         
         return terms
@@ -109,25 +181,15 @@ class QUBOScheduler:
             
         terms = []
         for agent in self.agents:
-            # For each time slot, collect all tasks that could be active
-            for t in range(self._horizon):
-                active_vars = set()  # Use set to avoid duplicates
-                for task in self.tasks:
-                    # Check all start times that would make task active at time t
-                    earliest_start = max(0, t - task.duration + 1)
-                    latest_start = t
-                    
-                    for start_t in range(earliest_start, latest_start + 1):
-                        var_idx = self.get_variable_index(task.id, agent.id, start_t)
-                        if var_idx is not None:
-                            active_vars.add(var_idx)
-                
-                # Add penalty terms for any pair of overlapping tasks
-                active_vars = sorted(list(active_vars))  # Sort for consistent ordering
-                for i in range(len(active_vars)):
-                    for j in range(i + 1, len(active_vars)):
-                        terms.append(QUBOTerm(indices=(active_vars[i], active_vars[j]), 
-                                            coefficient=2.0))
+            # Get all variables for this agent
+            agent_vars = [(key, idx) for key, idx in self._variable_map.items() 
+                         if key[1] == agent.id]
+            
+            # Add penalty terms for overlapping windows
+            for i, (key1, idx1) in enumerate(agent_vars):
+                for j, (key2, idx2) in enumerate(agent_vars[i+1:], i+1):
+                    if key1[2].overlaps(key2[2]):
+                        terms.append(QUBOTerm(indices=(idx1, idx2), coefficient=2.0))
         
         return terms
     
@@ -136,11 +198,11 @@ class QUBOScheduler:
         terms = []
         for task in self.tasks:
             for agent in self.agents:
-                for t, _ in self._reverse_map.items():
-                    var_idx = self.get_variable_index(task.id, agent.id, t)
-                    if var_idx is not None:
+                for key, var_idx in self._variable_map.items():
+                    if key[0] == task.id and key[1] == agent.id:
+                        window = key[2]
                         # Add term proportional to completion time
-                        completion_time = t + task.duration
+                        completion_time = window.end
                         terms.append(QUBOTerm(indices=(var_idx,), 
                                             coefficient=weight * completion_time))
         return terms
