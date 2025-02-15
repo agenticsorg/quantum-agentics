@@ -9,7 +9,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 # Import QAM modules from the qam package
 from qam import cluster_management, scheduler, quantum_reasoning, azure_quantum, orchestration_protocol, ui
-# Import OpenRouter streaming function from hello_world crew module for crewai integration
+from tools.qam_tools import QAMTools
+# Import OpenRouter streaming function for crewai integration
 from agents.hello_world.crew import stream_openrouter_response
 import asyncio
 
@@ -18,9 +19,9 @@ class QAMAgent:
         self.config = config
         self.agent_name = config.get("agent_name", "QAMAgent")
         self.mode = config.get("mode", "default")
-        # Initialize scheduler from qam.scheduler for demonstration purposes
-        self.scheduler = scheduler.QUBOScheduler()
-        # Additional settings can be configured
+        # Initialize QAM tools and scheduler
+        self.tools = QAMTools(config)
+        self.scheduler = self.tools.scheduler
         self.settings = config.get("settings", {})
     
     async def run_with_openrouter(self, prompt, task_type):
@@ -28,15 +29,37 @@ class QAMAgent:
         if task_type in ["research", "both"]:
             messages = [{
                 "role": "system",
-                "content": f"ReACT Reasoning: Analyze task requirements and propose actions for prompt: {prompt}"
+                "content": f"""You are a Quantum Scheduling Analyst using ReACT methodology to analyze scheduling problems.
+
+Use this format for your response:
+[THOUGHT] Analyze the quantum scheduling problem considering task dependencies, resource constraints, and QUBO/QAOA optimization parameters.
+
+[ACTION] List specific implementation steps for quantum scheduling optimization.
+
+[OBSERVATION] Document findings about critical paths, resource utilization, and optimization opportunities.
+
+[REFLECTION] Evaluate the quantum approach's effectiveness and suggest optimization strategies.
+
+Task: {prompt}"""
             }, {
                 "role": "user",
                 "content": prompt
             }]
         else:
-            messages = [{
+            messages = [{ 
                 "role": "system",
-                "content": f"ReACT Execution: Optimize scheduling decisions for prompt: {prompt}"
+                "content": f"""You are a Quantum Task Scheduler implementing QUBO/QAOA solutions.
+
+Use this format for your response:
+[THOUGHT] Analyze implementation requirements for quantum scheduling optimization.
+
+[ACTION] Detail specific steps for QUBO formulation and QAOA parameter optimization.
+
+[OBSERVATION] Document optimization progress and resource allocation decisions.
+
+[REFLECTION] Validate results and evaluate optimization quality.
+
+Task: {prompt}"""
             }, {
                 "role": "user",
                 "content": prompt
@@ -57,17 +80,75 @@ class QAMAgent:
             print(f"Running {self.agent_name} in {self.mode} mode with settings: {self.settings}")
         
         # Use crewai reasoning via OpenRouter integration
-        await self.run_with_openrouter(prompt, task_type)
+        await self.run_with_openrouter("Analyze and optimize quantum scheduling for a circuit optimization pipeline with resource constraints and dependencies", task_type)
         
-        # Simulate tool selection and optimization based on ReACT logic
+        # Use QAM tools for quantum scheduling
         if mode in ["test", "demo"]:
             print("🔧 Selecting optimal tools based on ReACT reasoning...")
-            print("⚙️ Optimizing scheduling decisions using crewai integration...")
         
-        # Simulate scheduling decisions
+        # Sample scheduling problem for testing
+        sample_tasks = [
+            {
+                "id": "task0",
+                "name": "Quantum Circuit Optimization",
+                "duration": 3,
+                "resources": ["quantum_processor", "memory"],
+                "dependencies": []
+            },
+            {
+                "id": "task1",
+                "name": "Classical Pre-processing",
+                "duration": 2,
+                "resources": ["cpu", "memory"],
+                "dependencies": ["task0"]
+            },
+            {
+                "id": "task2",
+                "name": "Result Analysis",
+                "duration": 2,
+                "resources": ["cpu", "memory"],
+                "dependencies": ["task1"]
+            }
+        ]
+        
+        # Define available resources
+        resources = {
+            "quantum_processor": {"capacity": 2, "cost_per_unit": 10},
+            "cpu": {"capacity": 4, "cost_per_unit": 1},
+            "memory": {"capacity": 8, "cost_per_unit": 2}
+        }
+        
+        # Analyze quantum requirements
+        if mode in ["test", "demo"]:
+            print("📊 Analyzing quantum requirements...")
+            
+        analysis = self.tools.analyze_quantum_requirements(sample_tasks)
+        
+        # Generate quantum-optimized schedule
+        if mode in ["test", "demo"]:
+            print("⚙️ Optimizing schedule using quantum algorithms...")
+            
+        schedule_result = self.tools.optimize_quantum_schedule(
+            sample_tasks,
+            resources
+        )
+        
+        # Validate solution
+        if mode in ["test", "demo"]:
+            print("✅ Validating quantum solution...")
+            
+        validation = self.tools.validate_quantum_solution(
+            schedule_result['schedule'],
+            sample_tasks,
+            resources
+        )
+        
+        # Format decisions
         decisions = []
         for i in range(3):
-            decision = f"Task_{i} scheduled at slot {i}"
+            task_id = f"task{i}"
+            slot = schedule_result['schedule'].get(task_id, i)
+            decision = f"Task_{i} scheduled at slot {slot}"
             decisions.append(decision)
         
         if mode in ["test", "demo"]:
@@ -75,8 +156,13 @@ class QAMAgent:
             print("📊 Final Scheduling Decisions:")
             for dec in decisions:
                 print("   ➤", dec)
+            print("\n🔍 Solution Validation:")
+            for check, passed in validation.items():
+                status = "✅" if passed else "❌"
+                print(f"   {status} {check.replace('_', ' ').title()}")
         else:
             print("Decisions:", decisions)
+            
         return decisions
 
     def run(self, prompt="Tell me about yourself", task_type="both"):

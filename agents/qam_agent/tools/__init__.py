@@ -1,7 +1,10 @@
-"""
-Custom tools for the CrewAI Multi-Model Demo
-"""
+"""Tools for QAM Agent quantum scheduling."""
 
-from .custom_tool import CustomTool
+from typing import Dict, List, Optional, Any
 
-__all__ = ['CustomTool']
+class CustomTool:
+    """Base class for custom tools."""
+    def __init__(self):
+        pass
+
+from .custom_tool import QuantumSchedulingTools

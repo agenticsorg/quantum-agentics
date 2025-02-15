@@ -1,14 +1,68 @@
 research_task:
-  description: "Analyze the user's aider configuration request using ReACT methodology. Consider: 1) What specific aider settings are relevant? 2) What are the best practices for these settings? 3) How can we optimize the configuration for the user's needs?"
-  expected_output: Detailed analysis with step-by-step reasoning and action plan
-  agent: researcher
+  description: |
+    Analyze quantum scheduling requirements and constraints:
+    1. Evaluate task dependencies and resource requirements
+    2. Identify critical paths and bottlenecks
+    3. Propose optimization strategies using QUBO/QAOA
+    4. Consider cluster management implications
+    5. Document findings and recommendations
 
 execution_task:
-  description: "Provide aider configuration guidance by: 1) Explaining relevant settings 2) Showing example commands 3) Suggesting optimal configurations based on the user's needs"
-  expected_output: Implementation results with function call outputs and tool usage report
-  agent: executor
+  description: |
+    Implement quantum-optimized scheduling solution:
+    1. Configure QUBO parameters and constraints
+    2. Apply QAOA optimization with specified parameters
+    3. Manage resource allocation across clusters
+    4. Handle task dependencies and constraints
+    5. Validate scheduling decisions
+    6. Generate detailed execution report
 
 analysis_task:
-  description: "Monitor and analyze system performance using defined metrics. Consider: 1) Current performance metrics 2) Optimization opportunities 3) Threshold violations 4) Recommended actions based on analysis.yaml rules"
-  expected_output: Performance analysis report with optimization recommendations
-  agent: analyzer
+  description: |
+    Evaluate quantum scheduling performance:
+    1. Monitor resource utilization metrics
+    2. Analyze scheduling efficiency
+    3. Track optimization convergence
+    4. Measure quantum advantage
+    5. Identify improvement opportunities
+    6. Generate performance insights
+
+sample_scheduling_problem:
+  tasks:
+    - id: "task1"
+      name: "Quantum Circuit Optimization"
+      duration: 3
+      resources: ["quantum_processor", "memory"]
+      dependencies: []
+    - id: "task2"
+      name: "Classical Pre-processing"
+      duration: 2
+      resources: ["cpu", "memory"]
+      dependencies: ["task1"]
+    - id: "task3"
+      name: "QAOA Parameter Optimization"
+      duration: 4
+      resources: ["quantum_processor", "gpu"]
+      dependencies: ["task2"]
+    - id: "task4"
+      name: "Result Analysis"
+      duration: 2
+      resources: ["cpu", "memory"]
+      dependencies: ["task3"]
+  resources:
+    quantum_processor:
+      capacity: 2
+      cost_per_unit: 10
+    cpu:
+      capacity: 4
+      cost_per_unit: 1
+    gpu:
+      capacity: 2
+      cost_per_unit: 5
+    memory:
+      capacity: 8
+      cost_per_unit: 2
+  constraints:
+    max_parallel_quantum_tasks: 2
+    max_total_cost: 100
+    deadline: 12

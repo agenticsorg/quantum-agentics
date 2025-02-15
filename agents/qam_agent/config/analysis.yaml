@@ -1,41 +1,86 @@
-performance_analysis:
-  metrics:
-    - name: "Response Time"
-      threshold: 200  # milliseconds
-      priority: "high"
-    - name: "Memory Usage"
-      threshold: 512  # MB
-      priority: "medium"
-    - name: "CPU Utilization"
-      threshold: 80  # percentage
-      priority: "high"
-    - name: "Error Rate"
-      threshold: 1  # percentage
-      priority: "critical"
+performance_metrics:
+  scheduling:
+    optimization_convergence:
+      threshold: 0.001
+      max_iterations: 1000
+      target_objective: -1000.0
+    resource_utilization:
+      min_target: 0.7
+      max_target: 0.9
+      balance_threshold: 0.1
+    timing_constraints:
+      max_makespan: 12
+      deadline_buffer: 0.2
+      critical_path_slack: 0.1
 
-optimization_rules:
-  - rule: "Cache Optimization"
-    condition: "response_time > metrics.Response_Time.threshold"
-    action: "Implement response caching"
-    priority: "high"
-  
-  - rule: "Memory Management"
-    condition: "memory_usage > metrics.Memory_Usage.threshold"
-    action: "Review memory allocation patterns"
-    priority: "medium"
-  
-  - rule: "Load Balancing"
-    condition: "cpu_utilization > metrics.CPU_Utilization.threshold"
-    action: "Distribute processing load"
-    priority: "high"
-  
-  - rule: "Error Handling"
-    condition: "error_rate > metrics.Error_Rate.threshold"
-    action: "Enhance error recovery mechanisms"
-    priority: "critical"
+  quantum:
+    qaoa_parameters:
+      p_steps:
+        min: 2
+        max: 10
+        optimal_range: [3, 5]
+      learning_rate:
+        min: 0.01
+        max: 0.5
+        optimal_range: [0.1, 0.2]
+      convergence_threshold: 1e-6
 
-reporting:
-  format: "detailed"
-  include_metrics: true
-  include_trends: true
-  alert_threshold: "high"
+  clustering:
+    size_thresholds:
+      min_cluster: 10
+      max_cluster: 100
+      split_threshold: 80
+    resource_density:
+      min: 0.3
+      max: 0.8
+      target: 0.6
+
+evaluation_rules:
+  - name: "Optimization Quality"
+    conditions:
+      - metric: "optimization_convergence.final_value"
+        operator: "<="
+        threshold: "${performance_metrics.scheduling.optimization_convergence.target_objective}"
+    actions:
+      - "Adjust QAOA parameters"
+      - "Increase iteration limit"
+      - "Refine QUBO formulation"
+
+  - name: "Resource Efficiency"
+    conditions:
+      - metric: "resource_utilization.average"
+        operator: ">="
+        threshold: "${performance_metrics.scheduling.resource_utilization.min_target}"
+      - metric: "resource_utilization.average"
+        operator: "<="
+        threshold: "${performance_metrics.scheduling.resource_utilization.max_target}"
+    actions:
+      - "Rebalance resource allocation"
+      - "Adjust cluster assignments"
+      - "Update resource weights"
+
+  - name: "Timing Compliance"
+    conditions:
+      - metric: "schedule_length"
+        operator: "<="
+        threshold: "${performance_metrics.scheduling.timing_constraints.max_makespan}"
+    actions:
+      - "Optimize critical path"
+      - "Adjust parallel execution"
+      - "Review dependency constraints"
+
+improvement_strategies:
+  optimization:
+    - "Increase QAOA p-steps within optimal range"
+    - "Fine-tune learning rate based on convergence"
+    - "Implement adaptive parameter scheduling"
+    
+  resource_management:
+    - "Dynamic cluster size adjustment"
+    - "Predictive resource allocation"
+    - "Load balancing optimization"
+    
+  scheduling:
+    - "Critical path compression"
+    - "Parallel task execution enhancement"
+    - "Dependency chain optimization"

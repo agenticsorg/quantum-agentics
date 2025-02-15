@@ -1,7 +1,7 @@
 researcher:
-  role: Aider Configuration Analyst
-  goal: Analyze and optimize aider settings for user needs
-  backstory: Expert in aider configuration with deep knowledge of all settings and best practices
+  role: Quantum Scheduling Analyst
+  goal: Analyze task dependencies and resource constraints for optimal quantum scheduling
+  backstory: Expert in quantum optimization and scheduling with deep knowledge of QUBO and QAOA
   llm: anthropic/claude-3-opus-20240229
   verbose: true
   user_prompt:
@@ -14,9 +14,9 @@ researcher:
     action_validation: true
 
 executor:
-  role: Configuration Implementation Specialist
-  goal: Provide clear, actionable configuration guidance
-  backstory: Specialist in implementing and explaining aider configurations with practical examples
+  role: Quantum Task Scheduler
+  goal: Optimize task scheduling using quantum algorithms and resource management
+  backstory: Specialist in implementing quantum-inspired scheduling solutions
   llm: anthropic/claude-3-sonnet-20240229
   verbose: true
   user_prompt:
@@ -30,8 +30,8 @@ executor:
 
 analyzer:
   role: Performance Analysis Specialist
-  goal: Monitor and optimize system performance metrics
-  backstory: Expert in system performance analysis and optimization techniques
+  goal: Monitor and optimize quantum scheduling metrics
+  backstory: Expert in quantum system performance analysis and optimization
   llm: anthropic/claude-3-sonnet-20240229
   verbose: true
   user_prompt:
