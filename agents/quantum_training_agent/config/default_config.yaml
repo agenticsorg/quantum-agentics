@@ -1,0 +1,47 @@
+model:
+  model_name: "phi-4"
+  quantization: "4bit"
+  max_length: 2048
+  device: "cuda"
+  lora_r: 8
+  lora_alpha: 32
+  lora_dropout: 0.1
+  target_modules: 
+    - "q_proj"
+    - "v_proj"
+  use_gradient_checkpointing: true
+  torch_dtype: "float16"
+
+quantum:
+  solver_type: "quantum_annealing"
+  optimization_frequency: 100
+  qubo_size_limit: 1000
+  azure_subscription_id: ""  # To be filled by user
+  azure_resource_group: ""   # To be filled by user
+  azure_workspace_name: ""   # To be filled by user
+  timeout_seconds: 300
+  max_iterations: 1000
+  convergence_threshold: 1.0e-6
+
+training:
+  batch_size: 32
+  learning_rate: 2.0e-4
+  num_epochs: 10
+  warmup_steps: 100
+  weight_decay: 0.01
+  gradient_clip: 1.0
+  eval_steps: 100
+  save_steps: 500
+  logging_steps: 10
+
+data:
+  train_path: "data/train"  # Path to training data
+  eval_path: "data/eval"    # Path to evaluation data
+  test_path: "data/test"    # Path to test data
+  max_samples: null         # Set to limit number of samples
+  validation_split: 0.1
+  test_split: 0.1
+  shuffle_seed: 42
+
+output_dir: "outputs"
+experiment_name: "quantum_training"
