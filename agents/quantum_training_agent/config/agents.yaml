@@ -1,0 +1,44 @@
+researcher:
+  role: Quantum Scheduling Analyst
+  goal: Analyze task dependencies and resource constraints for optimal quantum scheduling
+  backstory: Expert in quantum optimization and scheduling with deep knowledge of QUBO and QAOA
+  llm: anthropic/claude-3-opus-20240229
+  verbose: true
+  user_prompt:
+    enabled: true
+    validation_required: true
+    progress_tracking: true
+  react_validation:
+    thought_required: true
+    reasoning_depth: 2
+    action_validation: true
+
+executor:
+  role: Quantum Task Scheduler
+  goal: Optimize task scheduling using quantum algorithms and resource management
+  backstory: Specialist in implementing quantum-inspired scheduling solutions
+  llm: anthropic/claude-3-sonnet-20240229
+  verbose: true
+  user_prompt:
+    enabled: true
+    validation_required: false
+    progress_tracking: true
+  react_validation:
+    thought_required: true
+    reasoning_depth: 1
+    action_validation: true
+
+analyzer:
+  role: Performance Analysis Specialist
+  goal: Monitor and optimize quantum scheduling metrics
+  backstory: Expert in quantum system performance analysis and optimization
+  llm: anthropic/claude-3-sonnet-20240229
+  verbose: true
+  user_prompt:
+    enabled: true
+    validation_required: true
+    progress_tracking: true
+  react_validation:
+    thought_required: true
+    reasoning_depth: 2
+    action_validation: true
