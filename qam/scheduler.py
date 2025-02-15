@@ -84,10 +84,51 @@ class QUBOScheduler:
             # Penalize scheduling tasks at positions with high individual weights together
             return -0.5 * weight_i * weight_j
     
+    def _validate_dependencies(self, tasks: List[Dict], schedule: Dict[str, int]) -> bool:
+        """Validates that schedule respects task dependencies."""
+        for task in tasks:
+            if 'dependencies' in task:
+                task_time = schedule.get(task['id'])
+                if task_time is not None:
+                    for dep_id in task['dependencies']:
+                        dep_time = schedule.get(dep_id)
+                        if dep_time is not None and dep_time >= task_time:
+                            return False
+        return True
+    
+    def _validate_resources(self, tasks: List[Dict], schedule: Dict[str, int]) -> bool:
+        """Validates that schedule respects resource constraints."""
+        # Create time slot -> tasks mapping
+        time_slots: Dict[int, List[Dict]] = {}
+        for task in tasks:
+            slot = schedule.get(task['id'])
+            if slot is not None:
+                if slot not in time_slots:
+                    time_slots[slot] = []
+                time_slots[slot].append(task)
+        
+        # Check resource conflicts
+        for slot_tasks in time_slots.values():
+            resources_used = set()
+            for task in slot_tasks:
+                if 'resources' in task:
+                    task_resources = set(task['resources'])
+                    if resources_used & task_resources:  # Intersection not empty
+                        return False
+                    resources_used.update(task_resources)
+        return True
+    
     def optimize_schedule_with_reasoning(self, tasks: List[Dict], 
                                       horizon: int,
                                       reasoning_state: QuantumReasoningState) -> Dict:
         """Optimizes schedule incorporating quantum reasoning feedback."""
+        if not tasks:
+            return {
+                'schedule': {},
+                'objective_value': 0.0,
+                'reasoning_influence': 0.0
+            }
+            
         # Build QUBO with reasoning
         qubo_terms = self.build_qubo_with_reasoning(horizon, reasoning_state)
         
@@ -98,26 +139,61 @@ class QUBOScheduler:
             if term.i != term.j:
                 Q[term.j, term.i] = term.weight
         
-        # Solve QUBO (simplified example - in practice, use quantum solver)
-        schedule = np.zeros(horizon)
-        for i in range(horizon):
-            # Calculate energy for each position
-            energies = np.array([
-                sum(Q[i, j] * (1 if j == pos else 0) 
-                    for j in range(horizon))
-                for pos in range(horizon)
-            ])
-            # Select position with minimum energy
-            schedule[i] = np.argmin(energies)
+        # Initialize best schedule
+        best_schedule = {}
+        best_energy = float('inf')
+        max_attempts = 100  # Limit optimization attempts
         
-        # Convert schedule to task assignments
-        assignments = {}
-        for i, task in enumerate(tasks):
-            if i < horizon:
-                assignments[task['id']] = int(schedule[i])
+        for attempt in range(max_attempts):
+            # Generate candidate schedule
+            schedule = np.zeros(min(len(tasks), horizon), dtype=int)
+            available_slots = list(range(horizon))
+            
+            for i, task in enumerate(tasks[:horizon]):
+                # Consider dependencies
+                min_slot = 0
+                if 'dependencies' in task:
+                    for dep_id in task['dependencies']:
+                        for j, dep_task in enumerate(tasks[:horizon]):
+                            if dep_task['id'] == dep_id and j < i:
+                                min_slot = max(min_slot, schedule[j] + 1)
+                
+                # Consider resources
+                valid_slots = [
+                    slot for slot in available_slots 
+                    if slot >= min_slot and 
+                    self._validate_resources(tasks[:i], {**{t['id']: schedule[j] for j, t in enumerate(tasks[:i])}, task['id']: slot})
+                ]
+                
+                if valid_slots:
+                    slot = np.random.choice(valid_slots)
+                    schedule[i] = slot
+                    available_slots.remove(slot)
+                else:
+                    # No valid slot found, try next attempt
+                    break
+            else:
+                # Calculate energy for this schedule
+                energy = float(schedule @ Q @ schedule)
+                
+                # Update best schedule if this is better
+                if energy < best_energy:
+                    best_energy = energy
+                    best_schedule = {
+                        tasks[i]['id']: int(pos) 
+                        for i, pos in enumerate(schedule)
+                    }
+        
+        if not best_schedule:
+            # If no valid schedule found, assign sequential slots
+            best_schedule = {
+                task['id']: i 
+                for i, task in enumerate(tasks[:horizon])
+            }
+            best_energy = float(np.array(list(best_schedule.values())) @ Q @ np.array(list(best_schedule.values())))
         
         return {
-            'schedule': assignments,
-            'objective_value': float(schedule @ Q @ schedule),
+            'schedule': best_schedule,
+            'objective_value': float(best_energy),
             'reasoning_influence': sum(self.reasoning_weights.values()) / len(self.reasoning_weights) if self.reasoning_weights else 0.0
         }

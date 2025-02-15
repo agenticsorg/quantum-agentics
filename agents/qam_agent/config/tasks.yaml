@@ -1,0 +1,14 @@
+research_task:
+  description: "Analyze the user's aider configuration request using ReACT methodology. Consider: 1) What specific aider settings are relevant? 2) What are the best practices for these settings? 3) How can we optimize the configuration for the user's needs?"
+  expected_output: Detailed analysis with step-by-step reasoning and action plan
+  agent: researcher
+
+execution_task:
+  description: "Provide aider configuration guidance by: 1) Explaining relevant settings 2) Showing example commands 3) Suggesting optimal configurations based on the user's needs"
+  expected_output: Implementation results with function call outputs and tool usage report
+  agent: executor
+
+analysis_task:
+  description: "Monitor and analyze system performance using defined metrics. Consider: 1) Current performance metrics 2) Optimization opportunities 3) Threshold violations 4) Recommended actions based on analysis.yaml rules"
+  expected_output: Performance analysis report with optimization recommendations
+  agent: analyzer

@@ -1,0 +1,23 @@
+templates:
+  user_prompts:
+    input:
+      default: "Please provide input for {task_name}: "
+      validation: "Input validation failed. {error_message}. Please try again: "
+    progress:
+      start: "Starting task: {task_name}"
+      step: "Progress: {step_number}/{total_steps} - {step_description}"
+      complete: "Task completed: {task_name}"
+
+  validation_rules:
+    thought:
+      format: "Thought: {reasoning}"
+      min_length: 20
+    action:
+      format: "Action: {action_name}({params})"
+      required_fields: ["action_name", "params"]
+    observation:
+      format: "Observation: {result}"
+
+  progress_tracking:
+    format: "{timestamp} - {agent_name} - {status} - {message}"
+    statuses: ["started", "in_progress", "completed", "error"]
