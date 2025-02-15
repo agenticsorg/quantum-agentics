@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import argparse
 import json
-import os
+
+# Insert project root into system path for module resolution
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 # Import QAM modules from the qam package
 from qam import cluster_management, scheduler, quantum_reasoning, azure_quantum, orchestration_protocol, ui
+# Import OpenRouter streaming function from hello_world crew module for crewai integration
+from agents.hello_world.crew import stream_openrouter_response
+import asyncio
 
 class QAMAgent:
     def __init__(self, config: dict):
@@ -18,16 +22,86 @@ class QAMAgent:
         self.scheduler = scheduler.QUBOScheduler()
         # Additional settings can be configured
         self.settings = config.get("settings", {})
-
-    def run(self):
-        print(f"Running {self.agent_name} in {self.mode} mode with settings: {self.settings}")
-        # Simulate scheduling tasks using the scheduler (demonstration)
+    
+    async def run_with_openrouter(self, prompt, task_type):
+        # Construct messages based on task type
+        if task_type in ["research", "both"]:
+            messages = [{
+                "role": "system",
+                "content": f"ReACT Reasoning: Analyze task requirements and propose actions for prompt: {prompt}"
+            }, {
+                "role": "user",
+                "content": prompt
+            }]
+        else:
+            messages = [{
+                "role": "system",
+                "content": f"ReACT Execution: Optimize scheduling decisions for prompt: {prompt}"
+            }, {
+                "role": "user",
+                "content": prompt
+            }]
+        # Determine LLM model from configuration or use default
+        model = self.config.get("llm", "anthropic/claude-3-sonnet-20240229")
+        print("📡 Sending request to OpenRouter LLM for ReACT reasoning...")
+        await stream_openrouter_response(messages, model)
+    
+    async def run_with_streaming(self, prompt="Tell me about yourself", task_type="both"):
+        mode = self.mode.lower()
+        if mode in ["test", "demo"]:
+            print("╔══════════════════════════════════════════════════════════════════╗")
+            print("║  QAM Agent ReACT Execution with crewai & OpenRouter Integration    ║")
+            print("╚══════════════════════════════════════════════════════════════════╝")
+            print(f"⏱ Initializing agent: {self.agent_name}")
+        else:
+            print(f"Running {self.agent_name} in {self.mode} mode with settings: {self.settings}")
+        
+        # Use crewai reasoning via OpenRouter integration
+        await self.run_with_openrouter(prompt, task_type)
+        
+        # Simulate tool selection and optimization based on ReACT logic
+        if mode in ["test", "demo"]:
+            print("🔧 Selecting optimal tools based on ReACT reasoning...")
+            print("⚙️ Optimizing scheduling decisions using crewai integration...")
+        
+        # Simulate scheduling decisions
         decisions = []
         for i in range(3):
             decision = f"Task_{i} scheduled at slot {i}"
             decisions.append(decision)
-        print("Decisions:", decisions)
+        
+        if mode in ["test", "demo"]:
+            print("✅ ReACT Execution Complete!")
+            print("📊 Final Scheduling Decisions:")
+            for dec in decisions:
+                print("   ➤", dec)
+        else:
+            print("Decisions:", decisions)
         return decisions
+
+    def run(self, prompt="Tell me about yourself", task_type="both"):
+        try:
+            return asyncio.run(self.run_with_streaming(prompt=prompt, task_type=task_type))
+        except KeyboardInterrupt:
+            print("""
+╔══════════════════════════════════════════════════════════════════╗
+║  🛑 EMERGENCY SHUTDOWN SEQUENCE INITIATED                        ║
+╚══════════════════════════════════════════════════════════════════╝
+⚠️ Saving neural state...
+💾 Preserving memory banks...
+🔌 Powering down cores...
+""")
+            return None
+        except Exception as e:
+            print(f"""
+╔══════════════════════════════════════════════════════════════════╗
+║  ⚠️ SYSTEM MALFUNCTION DETECTED                                 ║
+╚══════════════════════════════════════════════════════════════════╝
+🔍 Error Analysis:
+{str(e)}
+🔧 Initiating recovery protocols...
+""")
+            return None
 
 def parse_args():
     parser = argparse.ArgumentParser(description="QAM Agent Implementation Phase Agent with extended QAM options")
@@ -56,7 +130,6 @@ def main():
             config = json.load(f)
     else:
         config = {}
-
     config["agent_name"] = args.agent_name
     config["mode"] = args.mode
     if "settings" not in config:
@@ -64,7 +137,6 @@ def main():
     config["settings"]["argument1"] = args.argument1
     config["settings"]["argument2"] = args.argument2
     config["settings"]["evaluation_options"] = args.evaluation_options.split(",")
-    # Additional QAM options
     config["settings"]["qaoa_p_steps"] = args.qaoa_p_steps
     config["settings"]["qaoa_learning_rate"] = args.qaoa_learning_rate
     config["settings"]["cluster_threshold"] = args.cluster_threshold
