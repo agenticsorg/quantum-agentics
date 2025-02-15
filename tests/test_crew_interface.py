@@ -1,246 +1,185 @@
-"""
-Tests for CrewAI integration.
-"""
 import pytest
-from unittest.mock import Mock, patch
-from qam.crew_interface import (
-    AgentConfig,
-    TaskConfig,
-    QAMManagerAgent,
-    Process
-)
-from qam.azure_quantum import AzureQuantumConfig
-from qam.scheduler import QUBOScheduler
+import numpy as np
+from qam.crew_interface import EnhancedAgent, DecisionPoint
+from qam.quantum_reasoning import Decision, DecisionPath, Outcome
 
-@pytest.fixture
-def azure_config():
-    """Fixture for Azure Quantum configuration."""
-    return AzureQuantumConfig(
-        resource_group="test-group",
-        workspace_name="test-workspace",
-        location="westus"
-    )
+def test_enhanced_agent_initialization():
+    agent = EnhancedAgent("test_agent", "test_role")
+    assert agent.name == "test_agent"
+    assert agent.role == "test_role"
+    assert len(agent.decision_history) == 0
+    assert agent.reasoning_state is not None
+    assert agent.react_engine is not None
 
-@pytest.fixture
-def mock_azure_client():
-    """Fixture for mocked Azure Quantum client."""
-    with patch('qam.crew_interface.AzureQuantumClient') as mock:
-        # Mock successful job submission and result
-        mock.return_value.submit_qubo.return_value = "test-job-id"
-        mock.return_value.wait_for_job.return_value = {
-            "solution": [0, 1, 0, 1],  # Example solution
-            "cost": -2.5
-        }
-        yield mock
-
-@pytest.fixture
-def mock_scheduler():
-    """Fixture for mocked QUBO scheduler."""
-    scheduler = Mock(spec=QUBOScheduler)
+def test_agent_decision_making():
+    agent = EnhancedAgent("test_agent", "test_role")
     
-    # Mock variable mapping
-    scheduler.decode_variable_index.side_effect = [
-        ("task1", "agent1", 0),  # For first 1 in solution
-        ("task1", "agent1", 2)   # For second 1 in solution
-    ]
-    
-    # Mock QUBO building
-    scheduler.build_qubo.return_value = [
-        {"indices": (0,), "coefficient": 1.0},
-        {"indices": (0, 1), "coefficient": 2.0}
-    ]
-    
-    # Mock Azure format conversion
-    scheduler.format_qubo_for_azure.return_value = {
-        "problem_type": "qubo",
-        "terms": [
-            {"c": 1.0, "ids": [0]},
-            {"c": 2.0, "ids": [0, 1]}
-        ]
+    context = {
+        'available_actions': ['action1', 'action2'],
+        'uncertainty': 0.5,
+        'timestamp': float(np.datetime64('now').astype('float64'))
     }
     
-    return scheduler
+    decision = agent.make_decision(context)
+    
+    assert isinstance(decision, Decision)
+    assert decision.action in context['available_actions']
+    assert len(agent.decision_history) == 1
+    assert agent.decision_history[0].decision == decision
 
-def test_create_agent(azure_config, mock_azure_client, mock_scheduler):
-    """Test agent creation."""
-    with patch('qam.azure_quantum.subprocess.run'):  # Mock subprocess.run
-        manager = QAMManagerAgent(azure_config, scheduler=mock_scheduler)
+def test_agent_reflection():
+    agent = EnhancedAgent("test_agent", "test_role")
     
-    config = AgentConfig(
-        id="agent1",
-        name="Test Agent",
-        role="tester",
-        goal="test things",
-        backstory="professional tester",
-        capabilities=["testing"]
-    )
-    
-    agent = manager.create_agent(config)
-    
-    # Verify agent creation
-    assert agent.name == "Test Agent"
-    assert agent.role == "tester"
-    assert agent.goal == "test things"
-    assert agent.backstory == "professional tester"
-    assert not agent.allow_delegation
-    assert agent.tasks == []
-    
-    # Verify scheduler agent creation
-    mock_scheduler.add_agent.assert_called_once()
-    assert "agent1" in manager._agent_map
-
-def test_create_task(azure_config, mock_azure_client, mock_scheduler):
-    """Test task creation."""
-    manager = QAMManagerAgent(azure_config, scheduler=mock_scheduler)
-    
-    config = TaskConfig(
-        id="task1",
-        name="Test Task",
-        description="test something",
-        duration=2,
-        requirements=["testing"]
-    )
-    
-    task = manager.create_task(config)
-    
-    # Verify task creation
-    assert task.description == "test something"
-    assert task.expected_output == "Completed task: Test Task"
-    assert task.context == {
-        'task_id': "task1",
-        'requirements': ["testing"]
+    # Make a decision
+    context = {
+        'available_actions': ['action1', 'action2'],
+        'uncertainty': 0.5,
+        'timestamp': float(np.datetime64('now').astype('float64'))
     }
-    assert task.agent is None
     
-    # Verify scheduler task creation
-    mock_scheduler.add_task.assert_called_once()
-    assert "task1" in manager._task_map
-
-def test_optimize_schedule(azure_config, mock_azure_client, mock_scheduler):
-    """Test schedule optimization."""
-    manager = QAMManagerAgent(azure_config, scheduler=mock_scheduler)
+    decision = agent.make_decision(context)
+    initial_weight = agent.react_engine.decision_weights.get(decision.action, 1.0)
     
-    # Create test task and agent
-    task_config = TaskConfig(
-        id="task1",
-        name="Test Task",
-        description="test something",
-        duration=2
-    )
-    agent_config = AgentConfig(
-        id="agent1",
-        name="Test Agent",
-        role="tester",
-        goal="test things",
-        backstory="professional tester"
+    # Create successful outcome
+    outcome = Outcome(
+        decision_id=decision.id,
+        success=True,
+        feedback={'action': decision.action},
+        timestamp=float(np.datetime64('now').astype('float64'))
     )
     
-    manager.create_agent(agent_config)
-    manager.create_task(task_config)
+    # Reflect on outcome
+    agent.reflect_on_outcome(outcome)
     
-    # Run optimization
-    schedule = manager.optimize_schedule(horizon=10)
-    mock_scheduler.decode_variable_index.assert_called()
-    
-    # Verify QUBO creation and submission
-    mock_scheduler.build_qubo.assert_called_once_with(10)
-    mock_scheduler.format_qubo_for_azure.assert_called_once()
-    mock_azure_client.return_value.submit_qubo.assert_called_once()
-    
-    # Verify schedule structure
-    assert "agent1" in schedule
-    assert len(schedule["agent1"]) > 0
-    assert all(key in schedule["agent1"][0] for key in ['task_id', 'start_time', 'duration'])
+    # Verify reflection
+    assert agent.decision_history[0].outcome == outcome
+    assert agent.react_engine.decision_weights[decision.action] > initial_weight
 
-def test_setup_crew(azure_config, mock_azure_client, mock_scheduler):
-    """Test crew setup."""
-    manager = QAMManagerAgent(azure_config, scheduler=mock_scheduler)
+def test_context_similarity():
+    agent = EnhancedAgent("test_agent", "test_role")
     
-    agents = [
-        AgentConfig(
-            id="agent1",
-            name="Agent 1",
-            role="role1",
-            goal="goal1",
-            backstory="backstory1"
-        ),
-        AgentConfig(
-            id="agent2",
-            name="Agent 2",
-            role="role2",
-            goal="goal2",
-            backstory="backstory2"
-        )
-    ]
+    context1 = {
+        'available_actions': ['action1', 'action2'],
+        'uncertainty': 0.5,
+        'environment': 'test'
+    }
     
-    tasks = [
-        TaskConfig(
-            id="task1",
-            name="Task 1",
-            description="desc1",
-            duration=2
-        ),
-        TaskConfig(
-            id="task2",
-            name="Task 2",
-            description="desc2",
-            duration=3
-        )
-    ]
+    context2 = {
+        'available_actions': ['action1', 'action3'],
+        'uncertainty': 0.5,
+        'environment': 'test'
+    }
     
-    manager.setup_crew(agents, tasks)
+    # Should be similar but not identical
+    similarity = agent._context_similarity(context1, context2)
+    assert 0 < similarity < 1
     
-    # Verify crew creation
-    assert manager.crew is not None
-    assert len(manager.crew.agents) == 2
-    assert len(manager.crew.tasks) == 2
-    assert manager.crew.process == Process.sequential
+    # Same context should have similarity 1
+    assert agent._context_similarity(context1, context1) == 1.0
     
-    # Verify agent and task creation
-    assert len(manager._agent_map) == 2
-    assert len(manager._task_map) == 2
+    # Different contexts should have low similarity
+    different_context = {
+        'available_actions': ['action4', 'action5'],
+        'uncertainty': 0.1,
+        'environment': 'prod'
+    }
+    assert agent._context_similarity(context1, different_context) < 0.5
 
-def test_execute_workflow(azure_config, mock_azure_client, mock_scheduler):
-    """Test end-to-end execution workflow."""
-    manager = QAMManagerAgent(azure_config, scheduler=mock_scheduler)
+def test_decision_confidence():
+    agent = EnhancedAgent("test_agent", "test_role")
     
-    # Set up a simple crew
-    agents = [
-        AgentConfig(
-            id="agent1",
-            name="Agent 1",
-            role="role1",
-            goal="goal1",
-            backstory="backstory1"
+    context = {
+        'available_actions': ['action1', 'action2'],
+        'uncertainty': 0.5,
+        'environment': 'test',
+        'timestamp': float(np.datetime64('now').astype('float64'))
+    }
+    
+    # Initial confidence should be default
+    initial_confidence = agent.get_decision_confidence(context)
+    assert initial_confidence == 0.5
+    
+    # Make some decisions and provide outcomes
+    for _ in range(3):
+        decision = agent.make_decision(context)
+        outcome = Outcome(
+            decision_id=decision.id,
+            success=True,  # All successful
+            feedback={'action': decision.action},
+            timestamp=float(np.datetime64('now').astype('float64'))
         )
-    ]
+        agent.reflect_on_outcome(outcome)
     
-    tasks = [
-        TaskConfig(
-            id="task1",
-            name="Task 1",
-            description="desc1",
-            duration=2
-        )
-    ]
-    
-    # Set up and execute
-    manager.setup_crew(agents, tasks)
-    manager.execute()
-    
-    # Verify optimization and execution
-    mock_scheduler.build_qubo.assert_called_once()
-    mock_azure_client.return_value.submit_qubo.assert_called_once()
-    
-    # Verify task assignment
-    assert len(manager.crew.agents[0].tasks) > 0
-    assert manager.crew.agents[0].tasks[0].context.get('start_time') is not None
+    # Confidence should be higher now
+    new_confidence = agent.get_decision_confidence(context)
+    assert new_confidence > initial_confidence
 
-def test_execute_without_setup(azure_config, mock_azure_client, mock_scheduler):
-    """Test execution without crew setup."""
-    manager = QAMManagerAgent(azure_config, scheduler=mock_scheduler)
+def test_performance_metrics():
+    agent = EnhancedAgent("test_agent", "test_role")
     
-    with pytest.raises(RuntimeError) as exc_info:
-        manager.execute()
+    # Initial metrics should be zeros
+    initial_metrics = agent.get_performance_metrics()
+    assert initial_metrics['success_rate'] == 0.0
+    assert initial_metrics['decision_count'] == 0
     
-    assert "Crew not set up" in str(exc_info.value)
+    context = {
+        'available_actions': ['action1', 'action2'],
+        'uncertainty': 0.5,
+        'timestamp': float(np.datetime64('now').astype('float64'))
+    }
+    
+    # Make some decisions with mixed outcomes
+    for i in range(4):
+        decision = agent.make_decision(context)
+        outcome = Outcome(
+            decision_id=decision.id,
+            success=(i % 2 == 0),  # Alternate between success and failure
+            feedback={'action': decision.action},
+            timestamp=float(np.datetime64('now').astype('float64'))
+        )
+        agent.reflect_on_outcome(outcome)
+    
+    metrics = agent.get_performance_metrics()
+    assert metrics['decision_count'] == 4
+    assert metrics['success_rate'] == 0.5  # Half successful
+    assert 0 <= metrics['average_confidence'] <= 1.0
+
+def test_agent_learning():
+    agent = EnhancedAgent("test_agent", "test_role")
+    np.random.seed(42)  # For reproducibility
+    
+    context = {
+        'available_actions': ['action1', 'action2'],
+        'uncertainty': 0.5,
+        'timestamp': float(np.datetime64('now').astype('float64'))
+    }
+    
+    # Track action selection frequencies
+    action_counts = {'action1': 0, 'action2': 0}
+    
+    # Initial phase - record baseline action selection
+    for _ in range(5):
+        decision = agent.make_decision(context)
+        action_counts[decision.action] += 1
+    
+    initial_ratio = action_counts['action1'] / (action_counts['action2'] + 1e-10)
+    
+    # Learning phase - make action1 always successful, action2 always fail
+    action_counts = {'action1': 0, 'action2': 0}
+    
+    for _ in range(10):
+        decision = agent.make_decision(context)
+        action_counts[decision.action] += 1
+        
+        outcome = Outcome(
+            decision_id=decision.id,
+            success=(decision.action == 'action1'),  # action1 always succeeds
+            feedback={'action': decision.action},
+            timestamp=float(np.datetime64('now').astype('float64'))
+        )
+        agent.reflect_on_outcome(outcome)
+    
+    final_ratio = action_counts['action1'] / (action_counts['action2'] + 1e-10)
+    
+    # Agent should learn to prefer action1
+    assert final_ratio > initial_ratio

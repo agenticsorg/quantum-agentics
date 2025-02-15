@@ -1,246 +1,139 @@
-"""
-Tests for the scheduler module.
-"""
 import pytest
-from qam.scheduler import Task, Agent, QUBOScheduler, QUBOTerm, TimeWindow
+import numpy as np
+from qam.scheduler import QUBOScheduler, QUBOTerm
+from qam.quantum_reasoning import QuantumReasoningState, DecisionPath
 
-def test_time_window():
-    """Test TimeWindow functionality."""
-    window = TimeWindow(start=1, end=4)
-    
-    # Test contains
-    assert 1 in window
-    assert 2 in window
-    assert 3 in window
-    assert 4 not in window
-    assert 0 not in window
-    
-    # Test overlaps
-    window2 = TimeWindow(start=3, end=6)
-    assert window.overlaps(window2)
-    assert window2.overlaps(window)
-    
-    window3 = TimeWindow(start=4, end=7)
-    assert not window.overlaps(window3)
-    
-    # Test duration
-    assert window.duration() == 3
+def test_qubo_term_creation():
+    term = QUBOTerm(1, 2, 0.5)
+    assert term.i == 1
+    assert term.j == 2
+    assert term.weight == 0.5
 
-def test_task_time_windows():
-    """Test task time window generation."""
-    task = Task(id="task1", duration=2)
+def test_build_qubo_with_reasoning():
+    scheduler = QUBOScheduler()
+    state = QuantumReasoningState()
     
-    # Test with default window size (task duration)
-    windows = task.get_time_windows(horizon=5)
-    assert len(windows) == 4  # Can start at t=0,1,2,3
-    assert all(w.duration() == 2 for w in windows)
+    # Add some decision paths to the state
+    path1 = DecisionPath(id="1", probability=0.6, actions=["schedule_0"])
+    path2 = DecisionPath(id="2", probability=0.4, actions=["schedule_1"])
     
-    # Test with custom window size
-    windows = task.get_time_windows(horizon=5, window_size=3)
-    assert len(windows) == 2  # Two windows: [0-3) and [3-5)
+    state.add_decision_path(path1, np.sqrt(0.6))
+    state.add_decision_path(path2, np.sqrt(0.4))
     
-    # Test with release time
-    task = Task(id="task2", duration=2, release_time=2)
-    windows = task.get_time_windows(horizon=5)
-    assert len(windows) == 2  # Can start at t=2,3
-    assert all(w.start >= 2 for w in windows)
+    # Build QUBO terms
+    horizon = 2
+    terms = scheduler.build_qubo_with_reasoning(horizon, state)
     
-    # Test with deadline
-    task = Task(id="task3", duration=2, deadline=4)
-    windows = task.get_time_windows(horizon=5)
-    assert len(windows) == 3  # Can start at t=0,1,2
-    assert all(w.end <= 4 for w in windows)
+    # Verify basic properties
+    assert len(terms) == 3  # For horizon 2, expect 3 terms (2 diagonal + 1 off-diagonal)
+    assert all(isinstance(term, QUBOTerm) for term in terms)
+    
+    # Verify weights are influenced by reasoning state
+    diagonal_terms = [t for t in terms if t.i == t.j]
+    assert len(diagonal_terms) == 2
+    
+    # First position should have higher weight due to path1's higher probability
+    assert diagonal_terms[0].weight > diagonal_terms[1].weight
 
-def test_window_size_optimization():
-    """Test window size optimization logic."""
+def test_optimize_schedule_with_reasoning():
     scheduler = QUBOScheduler()
+    state = QuantumReasoningState()
     
-    # Test with single task
-    task1 = Task(id="task1", duration=4)
-    scheduler.add_task(task1)
-    scheduler._create_variable_mapping(horizon=8)
-    assert scheduler._window_size == 4
+    # Create a state that strongly prefers early scheduling
+    path = DecisionPath(id="1", probability=1.0, actions=["schedule_0"])
+    state.add_decision_path(path, 1.0)
     
-    # Test with multiple tasks having GCD
-    scheduler = QUBOScheduler()
-    task1 = Task(id="task1", duration=4)
-    task2 = Task(id="task2", duration=6)
-    scheduler.add_task(task1)
-    scheduler.add_task(task2)
-    scheduler._create_variable_mapping(horizon=12)
-    assert scheduler._window_size == 2  # GCD of 4 and 6
+    # Create some tasks
+    tasks = [
+        {'id': 'task1', 'duration': 1},
+        {'id': 'task2', 'duration': 1}
+    ]
     
-    # Test with coprime durations
-    scheduler = QUBOScheduler()
-    task1 = Task(id="task1", duration=3)
-    task2 = Task(id="task2", duration=4)
-    scheduler.add_task(task1)
-    scheduler.add_task(task2)
-    scheduler._create_variable_mapping(horizon=12)
-    assert scheduler._window_size == 1  # GCD is 1
+    # Optimize schedule
+    result = scheduler.optimize_schedule_with_reasoning(tasks, 2, state)
+    
+    # Verify result structure
+    assert 'schedule' in result
+    assert 'objective_value' in result
+    assert 'reasoning_influence' in result
+    
+    # Verify schedule assignments
+    assert len(result['schedule']) == 2
+    assert all(isinstance(pos, int) for pos in result['schedule'].values())
+    
+    # Verify reasoning influence
+    assert 0 <= result['reasoning_influence'] <= 1.0
 
-def test_variable_mapping_with_windows():
-    """Test QUBO variable mapping creation with time windows."""
+def test_reasoning_weight_calculation():
     scheduler = QUBOScheduler()
+    state = QuantumReasoningState()
     
-    # Add tasks with different durations
-    task1 = Task(id="task1", duration=2)
-    task2 = Task(id="task2", duration=4)
-    agent = Agent(id="agent1")
+    # Add paths with different probabilities
+    paths = [
+        DecisionPath(id="1", probability=0.7, actions=["schedule_0"]),
+        DecisionPath(id="2", probability=0.3, actions=["schedule_1"])
+    ]
     
-    scheduler.add_task(task1)
-    scheduler.add_task(task2)
-    scheduler.add_agent(agent)
+    for path in paths:
+        state.add_decision_path(path, np.sqrt(path.probability))
     
-    scheduler._create_variable_mapping(horizon=6)
+    # Build QUBO to initialize reasoning weights
+    scheduler.build_qubo_with_reasoning(2, state)
     
-    # Check variable creation
-    # For task1 (duration=2): Can start at t=0,2,4
-    # For task2 (duration=4): Can start at t=0,2
-    expected_vars = 5  # 3 windows for task1 + 2 windows for task2
-    assert len(scheduler._variable_map) == expected_vars
+    # Calculate reasoning factors
+    factor_0 = scheduler._calculate_reasoning_factor(0, 0)  # Diagonal term
+    factor_01 = scheduler._calculate_reasoning_factor(0, 1)  # Off-diagonal term
     
-    # Test variable index retrieval
-    assert scheduler.get_variable_index("task1", "agent1", 0) is not None
-    assert scheduler.get_variable_index("task1", "agent1", 1) is not None
-    assert scheduler.get_variable_index("task2", "agent1", 0) is not None
-    assert scheduler.get_variable_index("task2", "agent1", 5) is None  # Invalid due to horizon
+    # Verify reasoning factors
+    assert factor_0 > 0  # Diagonal term should be positive
+    assert factor_01 < 0  # Off-diagonal term should be negative (penalty)
+    assert factor_0 > abs(factor_01)  # Diagonal influence should be stronger
 
-def test_task_assignment_constraints_with_windows():
-    """Test QUBO terms for task assignment constraints with time windows."""
+def test_empty_reasoning_state():
     scheduler = QUBOScheduler()
+    state = QuantumReasoningState()
     
-    task = Task(id="task1", duration=2)
-    agent1 = Agent(id="agent1")
-    agent2 = Agent(id="agent2")
+    # Build QUBO with empty state
+    terms = scheduler.build_qubo_with_reasoning(2, state)
     
-    scheduler.add_task(task)
-    scheduler.add_agent(agent1)
-    scheduler.add_agent(agent2)
-    
-    scheduler._create_variable_mapping(horizon=4)
-    terms = scheduler._build_task_assignment_constraints()
-    
-    # Verify we have both linear and quadratic terms
-    linear_terms = [term for term in terms if len(term.indices) == 1]
-    quadratic_terms = [term for term in terms if len(term.indices) == 2]
-    
-    assert len(linear_terms) > 0
-    assert len(quadratic_terms) > 0
-    
-    # Each task should be assigned exactly once
-    task_vars = set()
-    for key, idx in scheduler._variable_map.items():
-        if key[0] == "task1":
-            task_vars.add(idx)
-    
-    # Should have one negative linear term per variable
-    assert len([t for t in linear_terms if t.coefficient < 0]) == len(task_vars)
-
-def test_agent_overlap_constraints_with_windows():
-    """Test QUBO terms for agent overlap constraints with time windows."""
-    scheduler = QUBOScheduler()
-    
-    task1 = Task(id="task1", duration=2)
-    task2 = Task(id="task2", duration=2)
-    agent = Agent(id="agent1")
-    
-    scheduler.add_task(task1)
-    scheduler.add_task(task2)
-    scheduler.add_agent(agent)
-    
-    scheduler._create_variable_mapping(horizon=4)
-    terms = scheduler._build_agent_overlap_constraints()
-    
-    # Should have terms preventing overlapping assignments
+    # Should still create basic QUBO terms
     assert len(terms) > 0
-    # All terms should be quadratic (between pairs of variables)
-    assert all(len(term.indices) == 2 for term in terms)
     
-    # Verify overlapping windows have penalty terms
-    overlapping_count = 0
-    for key1, idx1 in scheduler._variable_map.items():
-        for key2, idx2 in scheduler._variable_map.items():
-            if (key1[1] == key2[1] == agent.id and  # Same agent
-                key1 != key2 and  # Different assignments
-                key1[2].overlaps(key2[2])):  # Overlapping windows
-                overlapping_count += 1
-    
-    # Each overlapping pair should have a penalty term
-    assert len(terms) == overlapping_count // 2  # Divide by 2 as each pair is counted twice
+    # Weights should be based only on base calculations
+    for term in terms:
+        if term.i == term.j:
+            assert np.isclose(term.weight, 1.0)  # Diagonal terms
+        else:
+            assert term.weight < 1.0  # Off-diagonal terms
 
-def test_makespan_objective_with_windows():
-    """Test QUBO terms for makespan minimization with time windows."""
+def test_schedule_optimization_consistency():
     scheduler = QUBOScheduler()
+    state = QuantumReasoningState()
     
-    task = Task(id="task1", duration=2)
-    agent = Agent(id="agent1")
+    # Create balanced state
+    paths = [
+        DecisionPath(id="1", probability=0.5, actions=["schedule_0"]),
+        DecisionPath(id="2", probability=0.5, actions=["schedule_1"])
+    ]
     
-    scheduler.add_task(task)
-    scheduler.add_agent(agent)
+    for path in paths:
+        state.add_decision_path(path, np.sqrt(path.probability))
     
-    scheduler._create_variable_mapping(horizon=4)
-    terms = scheduler._build_makespan_objective(weight=1.0)
+    tasks = [
+        {'id': 'task1', 'duration': 1},
+        {'id': 'task2', 'duration': 1}
+    ]
     
-    # Should have terms for each possible window
-    assert len(terms) > 0
-    # All terms should be linear (single variable)
-    assert all(len(term.indices) == 1 for term in terms)
+    # Run optimization multiple times
+    results = [
+        scheduler.optimize_schedule_with_reasoning(tasks, 2, state)
+        for _ in range(5)
+    ]
     
-    # Later windows should have higher coefficients
-    windows = []
-    for key, idx in scheduler._variable_map.items():
-        if key[0] == task.id and key[1] == agent.id:
-            windows.append((key[2].start, idx))
-    windows.sort()  # Sort by start time
+    # Verify objective values are consistent
+    objective_values = [r['objective_value'] for r in results]
+    assert max(objective_values) - min(objective_values) < 1e-10
     
-    # Get coefficients for each window
-    coeffs = []
-    for _, idx in windows:
-        term = next(t for t in terms if t.indices[0] == idx)
-        coeffs.append(term.coefficient)
-    
-    # Verify coefficients increase with later windows
-    assert all(coeffs[i] < coeffs[i+1] for i in range(len(coeffs)-1))
-
-def test_complete_qubo_formulation_with_windows():
-    """Test complete QUBO problem formulation with time windows."""
-    scheduler = QUBOScheduler()
-    
-    task1 = Task(id="task1", duration=2)
-    task2 = Task(id="task2", duration=3)
-    agent1 = Agent(id="agent1")
-    agent2 = Agent(id="agent2")
-    
-    scheduler.add_task(task1)
-    scheduler.add_task(task2)
-    scheduler.add_agent(agent1)
-    scheduler.add_agent(agent2)
-    
-    terms = scheduler.build_qubo(horizon=6, makespan_weight=1.0)
-    
-    # Verify we have all types of terms
-    assert len(terms) > 0
-    linear_terms = [term for term in terms if len(term.indices) == 1]
-    quadratic_terms = [term for term in terms if len(term.indices) == 2]
-    assert len(linear_terms) > 0
-    assert len(quadratic_terms) > 0
-
-def test_azure_qubo_format_with_windows():
-    """Test formatting QUBO with time windows for Azure Quantum submission."""
-    scheduler = QUBOScheduler()
-    
-    task = Task(id="task1", duration=2)
-    agent = Agent(id="agent1")
-    
-    scheduler.add_task(task)
-    scheduler.add_agent(agent)
-    
-    terms = scheduler.build_qubo(horizon=4)
-    azure_qubo = scheduler.format_qubo_for_azure(terms)
-    
-    assert "problem_type" in azure_qubo
-    assert azure_qubo["problem_type"] == "qubo"
-    assert "terms" in azure_qubo
-    assert isinstance(azure_qubo["terms"], list)
-    assert all("c" in term and "ids" in term for term in azure_qubo["terms"])
+    # Verify reasoning influence is consistent
+    influences = [r['reasoning_influence'] for r in results]
+    assert all(i == influences[0] for i in influences)
