@@ -208,4 +208,3 @@ def run_azure_quantum_job():
             os.remove("circuit.json")
 
 if __name__ == "__main__":
-    run_azure_quantum_job()
