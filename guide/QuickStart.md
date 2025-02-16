@@ -19,15 +19,23 @@ The Quantum Agent Manager (QAM) is a powerful framework for quantum-inspired tas
 
 ```bash
 # Clone the repository
-git clone https://github.com/example/qam
-cd qam
+git clone https://github.com/agenticsorg/Quantum-Agentic-Agents
+cd Quantum-Agentic-Agents
 
 # Install dependencies
 pip install -r requirements.txt
 
+# Install Azure CLI (Linux/Ubuntu)
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
 # Verify Azure CLI installation
 az --version
+
+# Install Azure Quantum extension
 az extension add -n quantum
+
+# Login to Azure (follow the device code authentication process)
+az login --use-device-code
 ```
 
 ## Basic Configuration
@@ -102,8 +110,9 @@ The result contains:
 ### Authentication Errors
 If you encounter authentication issues:
 1. Verify Azure CLI installation
-2. Check environment variables
-3. Ensure quantum workspace exists
+2. Run `az login --use-device-code` and follow the device code authentication process
+3. Check environment variables
+4. Ensure quantum workspace exists
 
 ### Job Submission Failures
 Common causes:

@@ -115,7 +115,10 @@ class AzureQuantumClient:
             result = subprocess.run(
                 ["az", "quantum", "job", "submit",
                  "--target-id", self.config.target_id,
-                 "--input-file", problem_file],
+                 "--job-input-file", problem_file,
+                 "--job-input-format", "ionq.circuit.v1",
+                 "--job-output-format", "ionq.quantum-results.v1",
+                 "--shots", "1000"],
                 check=True, capture_output=True, text=True
             )
             

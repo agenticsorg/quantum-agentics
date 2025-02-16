@@ -1,6 +1,7 @@
 from typing import List, Dict, Any, Optional, Tuple
 import numpy as np
 from .quantum_reasoning import QuantumReasoningState
+from .azure_quantum import AzureQuantumClient, AzureQuantumConfig
 
 class QUBOTerm:
     """Represents a term in the QUBO formulation."""
@@ -15,6 +16,14 @@ class QUBOScheduler:
     def __init__(self):
         self.base_weights: Dict[str, float] = {}
         self.reasoning_weights: Dict[str, float] = {}
+        self.quantum_client = AzureQuantumClient(
+            AzureQuantumConfig(
+                resource_group="AzureQuantum",
+                workspace_name="QuantumGPT",
+                location="eastus",
+                target_id="ionq.simulator"
+            )
+        )
         
     def build_qubo_with_reasoning(self, horizon: int, 
                                 reasoning_state: QuantumReasoningState) -> List[QUBOTerm]:
@@ -45,18 +54,101 @@ class QUBOScheduler:
         # Build basic QUBO terms
         for i in range(horizon):
             for j in range(i, horizon):
-                # Base weight from standard scheduling constraints
-                base_weight = self._calculate_base_weight(i, j)
-                
-                # Adjust weight using reasoning state
-                reasoning_factor = self._calculate_reasoning_factor(i, j)
-                
-                # Combine weights with stronger influence from reasoning
-                final_weight = base_weight * (1.0 + 2.0 * reasoning_factor)
-                
-                terms.append(QUBOTerm(i, j, final_weight))
+                terms.append(QUBOTerm(i, j, self._calculate_term_weight(i, j)))
         
         return terms
+
+    def _calculate_term_weight(self, i: int, j: int) -> float:
+        """Calculate the weight for a QUBO term with quantum reasoning."""
+        # Base weight from standard scheduling constraints
+        base_weight = self._calculate_base_weight(i, j)
+        
+        # Adjust weight using reasoning state
+        reasoning_factor = self._calculate_reasoning_factor(i, j)
+        
+        # Combine weights with stronger influence from reasoning
+        return base_weight * (1.0 + 2.0 * reasoning_factor)
+
+    def _prepare_quantum_problem(self, terms: List[QUBOTerm]) -> Dict:
+        """Convert QUBO terms to Azure Quantum format."""
+        return {
+            "type": "optimization",
+            "format": "microsoft.qio.v2",
+            "problem": {
+                "problem_type": "pubo",
+                "terms": [
+                    {
+                        "c": term.weight,
+                        "ids": [term.i, term.j] if term.i != term.j else [term.i]
+                    }
+                    for term in terms
+                ],
+                "version": "1.0"
+            },
+            "parameters": {
+                "timeout": 100,
+                "seed": 123,
+                "beta_start": 0.1,
+                "beta_stop": 1.0,
+                "sweeps": 1000
+            }
+        }
+
+    def _solve_quantum(self, terms: List[QUBOTerm], size: int) -> np.ndarray:
+        """Solve QUBO using Azure Quantum."""
+        try:
+            # Prepare and submit problem
+            problem = self._prepare_quantum_problem(terms)
+            job_id = self.quantum_client.submit_qubo(problem)
+            
+            # Wait for and process results
+            result = self.quantum_client.wait_for_job(job_id)
+            
+            # Convert result to numpy array
+            solution = np.zeros(size)
+            if 'configuration' in result.get('solutions', [{}])[0]:
+                config = result['solutions'][0]['configuration']
+                for i in range(size):
+                    solution[i] = float(config.get(str(i), 0))
+            
+            return solution
+        except Exception as e:
+            print(f"Quantum solver failed: {e}, falling back to classical solver")
+            return self._solve_classical(terms, size)
+
+    def _solve_classical(self, terms: List[QUBOTerm], size: int) -> np.ndarray:
+        """Classical fallback solver."""
+        # Initialize with random solution
+        solution = np.random.randint(0, 2, size)
+        energy = self._calculate_energy(solution, terms)
+        
+        # Simple greedy optimization
+        improved = True
+        while improved:
+            improved = False
+            for i in range(size):
+                # Try flipping each bit
+                solution[i] = 1 - solution[i]
+                new_energy = self._calculate_energy(solution, terms)
+                
+                if new_energy < energy:
+                    energy = new_energy
+                    improved = True
+                else:
+                    # Revert if no improvement
+                    solution[i] = 1 - solution[i]
+        
+        return solution
+
+    def _calculate_energy(self, solution: np.ndarray, terms: List[QUBOTerm]) -> float:
+        """Calculate energy for a given solution."""
+        energy = 0.0
+        for term in terms:
+            if term.i == term.j:
+                energy += term.weight * solution[term.i]
+            else:
+                energy += term.weight * solution[term.i] * solution[term.j]
+        return energy
     
     def _calculate_base_weight(self, i: int, j: int) -> float:
         """Calculates base weight for QUBO term without reasoning."""
