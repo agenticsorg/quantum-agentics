@@ -17,7 +17,7 @@ def test_quantum_hardware_connection():
         workspace_name=os.getenv('AZURE_WORKSPACE_NAME'),
         location=os.getenv('AZURE_LOCATION'),
         subscription_id=os.getenv('AZURE_SUBSCRIPTION_ID'),
-        target_id='ionq.qpu'  # Use actual quantum hardware
+        target_id=os.getenv('AZURE_TARGET_ID', 'ionq.simulator')  # Use simulator as fallback
     )
     
     # Initialize client
@@ -61,11 +61,13 @@ def test_quantum_hardware_connection():
             print("\nError: Unable to access quantum hardware.")
             
             if "provider id" in error_msg:
-                print("\nYour account needs to be upgraded to access real quantum hardware:")
-                print("1. Visit: https://azure.microsoft.com/en-us/products/quantum")
-                print("2. Upgrade to a paid subscription")
-                print("3. Request access to IonQ hardware")
-                print("\nIn the meantime, you can use 'ionq.simulator' for testing.")
+                if config.target_id == 'ionq.qpu':
+                    print("\nFalling back to simulator since hardware access is not configured.")
+                    config.target_id = 'ionq.simulator'
+                    # Recursive call with simulator
+                    test_quantum_hardware_connection()
+                    return
+                print("\nError: Unable to access quantum simulator. Please check your Azure Quantum configuration.")
                 return
             
             print("\nError details:")
