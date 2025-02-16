@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+import os
+import sys
+
+# Add project root to Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, "../.."))
+sys.path.insert(0, project_root)
+
 from qam.azure_quantum import AzureQuantumConfig, AzureQuantumClient
 import json
 

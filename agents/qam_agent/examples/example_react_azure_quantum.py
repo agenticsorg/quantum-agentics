@@ -25,11 +25,16 @@ import json
 import subprocess
 import time
 from typing import Dict, Optional
+from dotenv import load_dotenv
 
-# Add project root to sys.path
+# Add project root to sys.path and load environment variables
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, "../../.."))
 sys.path.insert(0, project_root)
+
+# Load environment variables from .env file in the current directory
+env_path = os.path.join(current_dir, '.env')
+load_dotenv(env_path)
 
 from agents.qam_agent.agent import QAMAgent
 

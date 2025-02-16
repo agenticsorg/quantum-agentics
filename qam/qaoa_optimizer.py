@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from typing import List, Dict, Optional, Tuple
 import numpy as np
 from dataclasses import dataclass, field
@@ -67,7 +68,7 @@ class QAOAOptimizer:
             if iteration > 0 and abs(energies[-1] - energies[-2]) < self.circuit_parameters['convergence_threshold']:
                 break
                 
-            # Update parameters (simplified gradient descent)
+            # Update parameters
             gamma, beta = self._update_parameters(
                 gamma,
                 beta,
@@ -101,7 +102,7 @@ class QAOAOptimizer:
         
     def _create_uniform_superposition(self, n_qubits: int) -> np.ndarray:
         """Create uniform superposition state."""
-        state = np.ones(2**n_qubits) / np.sqrt(2**n_qubits)
+        state = np.ones(2**n_qubits, dtype=np.complex128) / np.sqrt(2**n_qubits)
         return state
         
     def _apply_qaoa_circuit(self, state: np.ndarray,
@@ -123,8 +124,6 @@ class QAOAOptimizer:
                              hamiltonian: np.ndarray,
                              gamma: float) -> np.ndarray:
         """Apply phase separation operator using diagonal form."""
-        # Since Hamiltonian is diagonal in computational basis,
-        # we can just apply phases directly
         phases = np.diag(hamiltonian)
         return state * np.exp(-1j * gamma * phases)
         
@@ -132,7 +131,7 @@ class QAOAOptimizer:
                              beta: float) -> np.ndarray:
         """Apply mixing operator using single-qubit rotations."""
         n_qubits = int(np.log2(len(state)))
-        new_state = state.copy()
+        new_state = np.zeros_like(state, dtype=np.complex128)
         
         # Apply X rotation to each qubit
         for q in range(n_qubits):
@@ -140,7 +139,7 @@ class QAOAOptimizer:
             cos_beta = np.cos(beta)
             sin_beta = np.sin(beta)
             rot = np.array([[cos_beta, -1j*sin_beta],
-                           [-1j*sin_beta, cos_beta]])
+                           [-1j*sin_beta, cos_beta]], dtype=np.complex128)
             
             # Apply rotation to each basis state
             for i in range(0, 2**n_qubits, 2**(q+1)):
@@ -148,7 +147,6 @@ class QAOAOptimizer:
                     idx0 = i + j
                     idx1 = idx0 + 2**q
                     # Apply 2x2 rotation
-                    temp = new_state[idx0]
                     new_state[idx0] = rot[0,0] * state[idx0] + rot[0,1] * state[idx1]
                     new_state[idx1] = rot[1,0] * state[idx0] + rot[1,1] * state[idx1]
                     
@@ -165,11 +163,9 @@ class QAOAOptimizer:
                           state: np.ndarray,
                           energy: float) -> Tuple[np.ndarray, np.ndarray]:
         """Update QAOA parameters using stable gradient estimation."""
-        # Use smaller learning rate and perturbation
         lr = self.circuit_parameters['learning_rate'] * 0.1
         eps = 1e-7
         
-        # Initialize gradients
         gamma_grad = np.zeros_like(gamma)
         beta_grad = np.zeros_like(beta)
         
@@ -190,7 +186,6 @@ class QAOAOptimizer:
                 hamiltonian
             )
             
-            # Central difference
             gamma_grad[p] = (energy_plus - energy_minus) / (2 * eps)
             
             # Beta gradient
@@ -208,15 +203,14 @@ class QAOAOptimizer:
                 hamiltonian
             )
             
-            # Central difference
             beta_grad[p] = (energy_plus - energy_minus) / (2 * eps)
         
-        # Clip gradients to prevent instability
+        # Clip gradients
         max_grad = 1.0
         gamma_grad = np.clip(gamma_grad, -max_grad, max_grad)
         beta_grad = np.clip(beta_grad, -max_grad, max_grad)
         
-        # Update parameters with momentum
+        # Update parameters
         gamma = gamma - lr * gamma_grad
         beta = beta - lr * beta_grad
         

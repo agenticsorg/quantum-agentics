@@ -2,7 +2,7 @@ import warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 
 import argparse
-from crew import HelloWorldCrew
+from .crew import HelloWorldCrew
 
 # ANSI color codes
 MAGENTA = '\033[0;35m'
