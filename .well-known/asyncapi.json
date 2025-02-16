@@ -1,0 +1,194 @@
+{
+  "asyncapi": "2.5.0",
+  "info": {
+    "title": "Quantum Agentic Agents WebSocket API",
+    "version": "1.0.0",
+    "description": "Real-time WebSocket API for Quantum Agentic Agents system"
+  },
+  "servers": {
+    "production": {
+      "url": "wss://agentics.org",
+      "protocol": "wss",
+      "description": "Production WebSocket server"
+    }
+  },
+  "channels": {
+    "/realtime": {
+      "subscribe": {
+        "summary": "Receive real-time quantum and agent updates",
+        "message": {
+          "oneOf": [
+            {
+              "$ref": "#/components/messages/QuantumStateUpdate"
+            },
+            {
+              "$ref": "#/components/messages/AgentStatusUpdate"
+            },
+            {
+              "$ref": "#/components/messages/ResourceUpdate"
+            }
+          ]
+        }
+      },
+      "publish": {
+        "summary": "Send commands and updates",
+        "message": {
+          "oneOf": [
+            {
+              "$ref": "#/components/messages/QuantumCommand"
+            },
+            {
+              "$ref": "#/components/messages/AgentCommand"
+            }
+          ]
+        }
+      }
+    },
+    "/federation": {
+      "subscribe": {
+        "summary": "Receive federation network updates",
+        "message": {
+          "oneOf": [
+            {
+              "$ref": "#/components/messages/FederationStateSync"
+            },
+            {
+              "$ref": "#/components/messages/ResourceSharing"
+            }
+          ]
+        }
+      },
+      "publish": {
+        "summary": "Send federation commands",
+        "message": {
+          "$ref": "#/components/messages/FederationCommand"
+        }
+      }
+    }
+  },
+  "components": {
+    "messages": {
+      "QuantumStateUpdate": {
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["state_change", "measurement_result", "error_correction"]
+            },
+            "data": {
+              "type": "object"
+            },
+            "timestamp": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      },
+      "AgentStatusUpdate": {
+        "payload": {
+          "type": "object",
+          "properties": {
+            "agentId": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["active", "idle", "error"]
+            },
+            "currentTask": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "ResourceUpdate": {
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["quota", "usage", "availability"]
+            },
+            "metrics": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "QuantumCommand": {
+        "payload": {
+          "type": "object",
+          "properties": {
+            "operation": {
+              "type": "string"
+            },
+            "parameters": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "AgentCommand": {
+        "payload": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string"
+            },
+            "target": {
+              "type": "string"
+            },
+            "parameters": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "FederationStateSync": {
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["state_sync", "resource_update"]
+            },
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "ResourceSharing": {
+        "payload": {
+          "type": "object",
+          "properties": {
+            "resourceType": {
+              "type": "string"
+            },
+            "availability": {
+              "type": "object"
+            },
+            "constraints": {
+              "type": "array"
+            }
+          }
+        }
+      },
+      "FederationCommand": {
+        "payload": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string"
+            },
+            "parameters": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}

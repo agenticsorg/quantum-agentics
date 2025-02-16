@@ -1,0 +1,85 @@
+{
+  "version": "1.0.0",
+  "name": "Quantum Agentic Agents",
+  "description": "Advanced quantum computing integration with autonomous agent systems",
+  "baseUrl": "https://agentics.org",
+  "capabilities": {
+    "quantum": {
+      "enabled": true,
+      "providers": ["Azure Quantum"],
+      "features": [
+        "QAOA Optimization",
+        "Quantum Reasoning",
+        "Hierarchical QUBO",
+        "Quantum Orchestration"
+      ]
+    },
+    "agents": {
+      "types": [
+        "QAM Agent",
+        "Quantum Training Agent",
+        "Hello World Agent"
+      ],
+      "frameworks": [
+        "Crew-based Execution",
+        "Hierarchical Control",
+        "Mesh Networking"
+      ]
+    },
+    "scheduling": {
+      "enabled": true,
+      "features": [
+        "Enhanced Quantum Scheduler",
+        "Resource Management",
+        "Cluster Management"
+      ]
+    }
+  },
+  "authentication": {
+    "type": "JWT",
+    "endpoints": {
+      "token": "/auth/token",
+      "refresh": "/auth/refresh"
+    }
+  },
+  "api": {
+    "version": "v1",
+    "baseUrl": "/api",
+    "documentation": "/docs/api",
+    "protocols": ["REST", "WebSocket"]
+  },
+  "resources": {
+    "compute": {
+      "maxConcurrentOperations": 100,
+      "quotaPerHour": 1000
+    },
+    "storage": {
+      "maxPerDeployment": "1GB"
+    },
+    "websocket": {
+      "maxConnections": 5,
+      "endpoint": "wss://agentics.org/realtime"
+    }
+  },
+  "models": {
+    "quantum": {
+      "qaoa": "1.0.0",
+      "quboProblemSolver": "2.0.0"
+    },
+    "language": {
+      "gpt4o-mini": "1.0.0",
+      "llama-3": "1.0.0",
+      "claude-3": "1.0.0"
+    }
+  },
+  "federation": {
+    "enabled": true,
+    "features": [
+      "Cross-deployment Communication",
+      "Distributed Task Execution",
+      "Resource Sharing",
+      "State Synchronization"
+    ],
+    "endpoint": "wss://agentics.org/federation"
+  }
+}

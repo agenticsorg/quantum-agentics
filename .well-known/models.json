@@ -1,0 +1,147 @@
+{
+  "version": "1.0.0",
+  "quantum_models": {
+    "qaoa_optimizer": {
+      "version": "1.0.0",
+      "description": "Quantum Approximate Optimization Algorithm",
+      "capabilities": [
+        "combinatorial_optimization",
+        "parameter_optimization",
+        "constraint_satisfaction"
+      ],
+      "requirements": {
+        "qubits": "variable",
+        "circuit_depth": "problem_dependent",
+        "error_rates": "< 0.01"
+      },
+      "integration": {
+        "module": "qam.qaoa_optimizer",
+        "class": "QAOAOptimizer"
+      }
+    },
+    "quantum_reasoner": {
+      "version": "1.0.0",
+      "description": "Quantum-enhanced reasoning system",
+      "capabilities": [
+        "quantum_state_analysis",
+        "entanglement_optimization",
+        "quantum_decision_making"
+      ],
+      "requirements": {
+        "qubits": "20+",
+        "coherence_time": "100μs",
+        "fidelity": "0.99+"
+      },
+      "integration": {
+        "module": "qam.quantum_reasoning",
+        "class": "QuantumReasoner"
+      }
+    },
+    "hierarchical_qubo": {
+      "version": "2.0.0",
+      "description": "Hierarchical Quantum Unconstrained Binary Optimization",
+      "capabilities": [
+        "large_scale_optimization",
+        "multi_level_decomposition",
+        "constraint_handling"
+      ],
+      "requirements": {
+        "qubits": "100+",
+        "connectivity": "all-to-all",
+        "precision": "64-bit"
+      },
+      "integration": {
+        "module": "qam.hierarchical_qubo",
+        "class": "HierarchicalQUBOSolver"
+      }
+    }
+  },
+  "language_models": {
+    "gpt4o-mini": {
+      "version": "1.0.0",
+      "description": "Optimized language model for quantum computing tasks",
+      "capabilities": [
+        "quantum_code_generation",
+        "circuit_optimization",
+        "error_analysis"
+      ],
+      "requirements": {
+        "memory": "16GB",
+        "compute": "8 vCPUs",
+        "batch_size": "flexible"
+      },
+      "integration": {
+        "api_endpoint": "/api/models/gpt4o-mini",
+        "websocket": "wss://agentics.org/models/gpt4o-mini"
+      }
+    },
+    "llama-3": {
+      "version": "1.0.0",
+      "description": "Advanced multilingual quantum computing assistant",
+      "capabilities": [
+        "multi_language_support",
+        "quantum_documentation",
+        "code_explanation"
+      ],
+      "requirements": {
+        "memory": "32GB",
+        "compute": "16 vCPUs",
+        "gpu": "recommended"
+      },
+      "integration": {
+        "api_endpoint": "/api/models/llama-3",
+        "websocket": "wss://agentics.org/models/llama-3"
+      }
+    },
+    "claude-3": {
+      "version": "1.0.0",
+      "description": "Multimodal quantum reasoning system",
+      "capabilities": [
+        "quantum_circuit_visualization",
+        "error_pattern_recognition",
+        "performance_analysis"
+      ],
+      "requirements": {
+        "memory": "64GB",
+        "compute": "32 vCPUs",
+        "gpu": "required"
+      },
+      "integration": {
+        "api_endpoint": "/api/models/claude-3",
+        "websocket": "wss://agentics.org/models/claude-3"
+      }
+    }
+  },
+  "training_configurations": {
+    "quantum_training": {
+      "datasets": {
+        "path": "agents/quantum_training_agent/quantum_data",
+        "formats": ["json", "qasm", "cirq"]
+      },
+      "evaluation_metrics": [
+        "circuit_depth",
+        "gate_count",
+        "execution_time",
+        "fidelity"
+      ],
+      "optimization_targets": [
+        "resource_efficiency",
+        "error_mitigation",
+        "execution_speed"
+      ]
+    },
+    "model_integration": {
+      "supported_frameworks": [
+        "TensorFlow Quantum",
+        "Qiskit",
+        "Cirq",
+        "PyTorch Quantum"
+      ],
+      "hardware_targets": [
+        "Azure Quantum",
+        "Classical GPU",
+        "Quantum Simulators"
+      ]
+    }
+  }
+}

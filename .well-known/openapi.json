@@ -1,0 +1,162 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Quantum Agentic Agents API",
+    "version": "1.0.0",
+    "description": "REST API for Quantum Agentic Agents system"
+  },
+  "servers": [
+    {
+      "url": "https://agentics.org/api/v1"
+    }
+  ],
+  "paths": {
+    "/quantum/execute": {
+      "post": {
+        "summary": "Execute quantum operation",
+        "tags": ["Quantum Operations"],
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuantumOperation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful execution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuantumResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/deploy": {
+      "post": {
+        "summary": "Deploy new agent",
+        "tags": ["Agent Management"],
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentDeployment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Agent deployed successfully"
+          }
+        }
+      }
+    },
+    "/scheduler/tasks": {
+      "post": {
+        "summary": "Schedule quantum task",
+        "tags": ["Scheduling"],
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleTask"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Task scheduled successfully"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "QuantumOperation": {
+        "type": "object",
+        "required": ["type", "parameters"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["QAOA", "QUBO", "StatePrep"]
+          },
+          "parameters": {
+            "type": "object"
+          },
+          "constraints": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "QuantumResult": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "object"
+          },
+          "measurements": {
+            "type": "array"
+          },
+          "statistics": {
+            "type": "object"
+          }
+        }
+      },
+      "AgentDeployment": {
+        "type": "object",
+        "required": ["type", "config"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["QAMAgent", "TrainingAgent"]
+          },
+          "config": {
+            "type": "object"
+          }
+        }
+      },
+      "ScheduleTask": {
+        "type": "object",
+        "required": ["operation", "resources"],
+        "properties": {
+          "operation": {
+            "$ref": "#/components/schemas/QuantumOperation"
+          },
+          "resources": {
+            "type": "object"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
