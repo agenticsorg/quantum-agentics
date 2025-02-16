@@ -26,6 +26,41 @@ Quantum Agent Manager is a quantum-inspired task scheduling system designed for 
 | | Enhanced Scheduling | Quantum-optimized task scheduling | ✅ Production |
 | | Resource Optimization | Intelligent resource utilization | ✅ Production |
 
+# QAM Agents
+
+## Overview
+This directory contains the agent implementations for the Quantum Agent Manager (QAM) system. Each agent type is designed to leverage quantum computing capabilities through the QAM framework for optimized decision-making and task execution.
+
+## Agent Types
+
+### 1. Hello World Agent
+Located in `hello_world/`
+- Basic example agent implementation
+- Demonstrates core agent functionality
+- Useful for testing and learning the system
+
+### 2. QAM Agent
+Located in `qam_agent/`
+- Primary agent implementation
+- Integrates with Azure Quantum
+- Handles task scheduling and optimization
+- Features:
+  * Quantum-enhanced decision making
+  * Resource-aware scheduling
+  * Dynamic cluster adaptation
+  * Fallback mechanisms
+
+### 3. Quantum Training Agent
+Located in `quantum_training_agent/`
+- Specialized agent for quantum model training
+- Implements quantum learning algorithms
+- Handles model optimization
+- Features:
+  * Quantum circuit training
+  * Model parameter optimization
+  * Performance benchmarking
+  * Training data management
+
 ## Performance Metrics
 
 | Metric | Classical Approach | Quantum-Enhanced | Improvement |
