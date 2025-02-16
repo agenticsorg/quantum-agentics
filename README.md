@@ -1,4 +1,4 @@
-# Quantum Agentic Agents
+# Quantum Agentic
 
 ## Introduction
 
