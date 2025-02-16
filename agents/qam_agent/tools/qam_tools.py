@@ -24,17 +24,17 @@ class QAMTools:
         self.quantum_reasoner = quantum_reasoning.QuantumReasoningState()
         self.orchestrator = orchestration_protocol.QuantumOrchestrationProtocol()
         
-        # Initialize Azure Quantum if credentials provided
-        if all(self.config.get('azure', {}).get(k) for k in 
-              ['resource_group', 'workspace_name', 'subscription_id']):
-            self.azure_client = azure_quantum.AzureQuantumClient(
-                resource_group=self.config['azure']['resource_group'],
-                workspace_name=self.config['azure']['workspace_name'],
-                subscription_id=self.config['azure']['subscription_id'],
-                location=self.config['azure'].get('location', 'westus'),
-                target_id=self.config['azure'].get('target_id', 
-                                                 'microsoft.paralleltempering.cpu')
+        # Initialize Azure Quantum if Azure configuration is provided
+        azure_config = self.config.get('azure', {})
+        if azure_config:
+            config = azure_quantum.AzureQuantumConfig(
+                resource_group=azure_config.get('resource_group'),
+                workspace_name=azure_config.get('workspace_name'),
+                location=azure_config.get('location', 'westus'),
+                subscription_id=azure_config.get('subscription_id'),
+                target_id=azure_config.get('target_id', 'microsoft.paralleltempering.cpu')
             )
+            self.azure_client = azure_quantum.AzureQuantumClient(config)
         else:
             self.azure_client = None
             
@@ -119,14 +119,19 @@ class QAMTools:
         
         for resource_id, resource in resources.items():
             capacity = resource['capacity']
-            allocated = 0
-            for task in tasks:
+            # Track resource usage per time slot
+            usage_by_time = {}
+            for task_id, time_slot in schedule['schedule'].items():
+                task = next(t for t in tasks if t['id'] == task_id)
                 if resource_id in task.get('resources', []):
-                    allocated += 1
-            utilization = allocated / capacity
+                    usage_by_time[time_slot] = usage_by_time.get(time_slot, 0) + 1
+            
+            # Find peak usage
+            peak_usage = max(usage_by_time.values()) if usage_by_time else 0
+            utilization = peak_usage / capacity
             optimized_resources['allocations'][resource_id] = {
-                'allocated': allocated,
-                'available': capacity - allocated
+                'allocated': peak_usage,
+                'available': capacity - peak_usage
             }
             optimized_resources['utilization'][resource_id] = utilization
         

@@ -80,7 +80,7 @@ class AzureQuantumClient:
             ]
             
             if self.config.subscription_id:
-                cmd.extend(["-s", self.config.subscription_id])
+                cmd.extend(["--subscription", self.config.subscription_id])
             
             subprocess.run(cmd, check=True, capture_output=True, text=True)
             

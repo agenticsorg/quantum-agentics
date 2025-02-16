@@ -122,24 +122,37 @@ class QAOAOptimizer:
     def _apply_phase_separator(self, state: np.ndarray,
                              hamiltonian: np.ndarray,
                              gamma: float) -> np.ndarray:
-        """Apply phase separation operator."""
-        return np.exp(-1j * gamma * hamiltonian) @ state
+        """Apply phase separation operator using diagonal form."""
+        # Since Hamiltonian is diagonal in computational basis,
+        # we can just apply phases directly
+        phases = np.diag(hamiltonian)
+        return state * np.exp(-1j * gamma * phases)
         
     def _apply_mixing_operator(self, state: np.ndarray,
                              beta: float) -> np.ndarray:
-        """Apply mixing operator."""
+        """Apply mixing operator using single-qubit rotations."""
         n_qubits = int(np.log2(len(state)))
-        mixing_matrix = np.zeros((2**n_qubits, 2**n_qubits), dtype=complex)
+        new_state = state.copy()
         
-        # Simplified mixing operator (X rotations)
-        for i in range(2**n_qubits):
-            for j in range(2**n_qubits):
-                if bin(i ^ j).count('1') == 1:  # Single bit flip
-                    mixing_matrix[i, j] = np.sin(beta)
-                elif i == j:
-                    mixing_matrix[i, j] = np.cos(beta)
+        # Apply X rotation to each qubit
+        for q in range(n_qubits):
+            # Create rotation matrix for single qubit
+            cos_beta = np.cos(beta)
+            sin_beta = np.sin(beta)
+            rot = np.array([[cos_beta, -1j*sin_beta],
+                           [-1j*sin_beta, cos_beta]])
+            
+            # Apply rotation to each basis state
+            for i in range(0, 2**n_qubits, 2**(q+1)):
+                for j in range(2**q):
+                    idx0 = i + j
+                    idx1 = idx0 + 2**q
+                    # Apply 2x2 rotation
+                    temp = new_state[idx0]
+                    new_state[idx0] = rot[0,0] * state[idx0] + rot[0,1] * state[idx1]
+                    new_state[idx1] = rot[1,0] * state[idx0] + rot[1,1] * state[idx1]
                     
-        return mixing_matrix @ state
+        return new_state
         
     def _calculate_energy(self, state: np.ndarray,
                          hamiltonian: np.ndarray) -> float:
@@ -151,36 +164,61 @@ class QAOAOptimizer:
                           hamiltonian: np.ndarray,
                           state: np.ndarray,
                           energy: float) -> Tuple[np.ndarray, np.ndarray]:
-        """Update QAOA parameters using gradient descent."""
-        # Simplified parameter update
+        """Update QAOA parameters using stable gradient estimation."""
+        # Use smaller learning rate and perturbation
+        lr = self.circuit_parameters['learning_rate'] * 0.1
+        eps = 1e-7
+        
+        # Initialize gradients
         gamma_grad = np.zeros_like(gamma)
         beta_grad = np.zeros_like(beta)
         
-        eps = 1e-5  # Small perturbation for numerical gradient
-        
-        # Calculate gradients
+        # Calculate gradients using central difference
         for p in range(len(gamma)):
             # Gamma gradient
             gamma_plus = gamma.copy()
+            gamma_minus = gamma.copy()
             gamma_plus[p] += eps
+            gamma_minus[p] -= eps
+            
             energy_plus = self._calculate_energy(
                 self._apply_qaoa_circuit(state, hamiltonian, gamma_plus, beta),
                 hamiltonian
             )
-            gamma_grad[p] = (energy_plus - energy) / eps
+            energy_minus = self._calculate_energy(
+                self._apply_qaoa_circuit(state, hamiltonian, gamma_minus, beta),
+                hamiltonian
+            )
+            
+            # Central difference
+            gamma_grad[p] = (energy_plus - energy_minus) / (2 * eps)
             
             # Beta gradient
             beta_plus = beta.copy()
+            beta_minus = beta.copy()
             beta_plus[p] += eps
+            beta_minus[p] -= eps
+            
             energy_plus = self._calculate_energy(
                 self._apply_qaoa_circuit(state, hamiltonian, gamma, beta_plus),
                 hamiltonian
             )
-            beta_grad[p] = (energy_plus - energy) / eps
+            energy_minus = self._calculate_energy(
+                self._apply_qaoa_circuit(state, hamiltonian, gamma, beta_minus),
+                hamiltonian
+            )
             
-        # Update parameters
-        gamma -= self.circuit_parameters['learning_rate'] * gamma_grad
-        beta -= self.circuit_parameters['learning_rate'] * beta_grad
+            # Central difference
+            beta_grad[p] = (energy_plus - energy_minus) / (2 * eps)
+        
+        # Clip gradients to prevent instability
+        max_grad = 1.0
+        gamma_grad = np.clip(gamma_grad, -max_grad, max_grad)
+        beta_grad = np.clip(beta_grad, -max_grad, max_grad)
+        
+        # Update parameters with momentum
+        gamma = gamma - lr * gamma_grad
+        beta = beta - lr * beta_grad
         
         return gamma, beta
         
