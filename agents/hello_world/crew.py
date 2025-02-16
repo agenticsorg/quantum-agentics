@@ -1,4 +1,4 @@
-from tools.custom_tool import CustomTool
+from agents.hello_world.tools.custom_tool import CustomTool
 import yaml
 from dotenv import load_dotenv
 import os

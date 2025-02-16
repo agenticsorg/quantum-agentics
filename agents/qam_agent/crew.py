@@ -1,4 +1,4 @@
-from tools.custom_tool import CustomTool
+from agents.qam_agent.tools.custom_tool import CustomTool
 import yaml
 from dotenv import load_dotenv
 import os
@@ -43,7 +43,7 @@ async def stream_openrouter_response(messages, model, progress_callback=None):
                     except (json.JSONDecodeError, UnicodeDecodeError):
                         continue
 
-class HelloWorldCrew:
+class QAMCrew:
     def __init__(self):
         with open('config/agents.yaml', 'r') as f:
             self.agents_config = yaml.safe_load(f)

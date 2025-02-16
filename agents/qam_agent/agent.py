@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 # Import QAM modules from the qam package
 from qam import cluster_management, scheduler, quantum_reasoning, azure_quantum, orchestration_protocol, ui
-from tools.qam_tools import QAMTools
+from agents.qam_agent.tools.qam_tools import QAMTools
 # Import OpenRouter streaming function for crewai integration
 from agents.hello_world.crew import stream_openrouter_response
 import asyncio
