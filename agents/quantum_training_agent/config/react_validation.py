@@ -1,187 +1,189 @@
-"""ReACT validation rules and utilities for QAM Agent."""
+"""ReACT validation configuration for quantum training agent."""
 
+from typing import Dict, List, Any
 import re
-from typing import Dict, List, Optional
 
 class ReACTValidator:
-    """Validates ReACT methodology compliance in agent responses."""
+    """Validates ReACT methodology execution in agent responses."""
+    
+    REACT_COMPONENTS = [
+        "THOUGHT",
+        "ACTION",
+        "OBSERVATION",
+        "REFLECTION"
+    ]
+    
+    REQUIRED_PATTERNS = {
+        "THOUGHT": r"\[THOUGHT\].*(?=\[ACTION\]|\Z)",
+        "ACTION": r"\[ACTION\].*(?=\[OBSERVATION\]|\Z)",
+        "OBSERVATION": r"\[OBSERVATION\].*(?=\[REFLECTION\]|\Z)",
+        "REFLECTION": r"\[REFLECTION\].*(?=\[THOUGHT\]|\Z)"
+    }
+    
+    VALIDATION_RULES = {
+        "THOUGHT": [
+            "Contains clear reasoning process",
+            "Considers quantum optimization aspects",
+            "Addresses training objectives"
+        ],
+        "ACTION": [
+            "Specifies concrete steps",
+            "Includes quantum operations",
+            "Defines expected outcomes"
+        ],
+        "OBSERVATION": [
+            "Documents actual results",
+            "Includes metrics and measurements",
+            "Notes any deviations"
+        ],
+        "REFLECTION": [
+            "Analyzes effectiveness",
+            "Suggests improvements",
+            "Plans next steps"
+        ]
+    }
     
     def __init__(self):
-        self.validation_rules = {
-            'thought': {
-                'required': True,
-                'min_words': 10,
-                'max_words': 200,
-                'pattern': r'\[THOUGHT\].*?(?=\[ACTION\]|\[OBSERVATION\]|\[REFLECTION\]|\[RECOMMENDATION\]|\[VALIDATION\]|$)',
-                'required_elements': ['analysis', 'reasoning', 'consideration']
-            },
-            'action': {
-                'required': True,
-                'min_words': 15,
-                'max_words': 300,
-                'pattern': r'\[ACTION\].*?(?=\[OBSERVATION\]|\[REFLECTION\]|\[RECOMMENDATION\]|\[VALIDATION\]|$)',
-                'required_elements': ['specific steps', 'clear objectives']
-            },
-            'observation': {
-                'required': True,
-                'min_words': 15,
-                'max_words': 150,
-                'pattern': r'\[OBSERVATION\].*?(?=\[REFLECTION\]|\[RECOMMENDATION\]|\[VALIDATION\]|$)',
-                'required_elements': ['findings', 'results', 'outcomes']
-            },
-            'reflection': {
-                'required': True,
-                'min_words': 20,
-                'max_words': 200,
-                'pattern': r'\[REFLECTION\].*?(?=\[RECOMMENDATION\]|\[VALIDATION\]|$)',
-                'required_elements': ['analysis']
+        """Initialize the ReACT validator."""
+        self.validation_results = {
+            component: {"present": False, "valid": False}
+            for component in self.REACT_COMPONENTS
+        }
+    
+    def validate_response(self, response: str) -> Dict[str, Any]:
+        """Validate a ReACT response.
+        
+        Args:
+            response: The response text to validate
+            
+        Returns:
+            Dictionary containing validation results
+        """
+        self._reset_validation()
+        
+        # Check for presence of components
+        for component, pattern in self.REQUIRED_PATTERNS.items():
+            match = re.search(pattern, response, re.DOTALL)
+            if match:
+                self.validation_results[component]["present"] = True
+                content = match.group(0).strip()
+                self.validation_results[component]["valid"] = self._validate_component(
+                    component, content
+                )
+        
+        return self._get_validation_summary()
+    
+    def _reset_validation(self):
+        """Reset validation results."""
+        for component in self.REACT_COMPONENTS:
+            self.validation_results[component] = {
+                "present": False,
+                "valid": False
+            }
+    
+    def _validate_component(self, component: str, content: str) -> bool:
+        """Validate a specific ReACT component.
+        
+        Args:
+            component: The component name
+            content: The component content
+            
+        Returns:
+            Boolean indicating if component is valid
+        """
+        if not content:
+            return False
+            
+        # Check against validation rules
+        rules = self.VALIDATION_RULES.get(component, [])
+        valid_count = 0
+        
+        for rule in rules:
+            if self._check_rule(content, rule):
+                valid_count += 1
+                
+        # Component is valid if it satisfies at least 2/3 of rules
+        return valid_count >= len(rules) * 2 // 3
+    
+    def _check_rule(self, content: str, rule: str) -> bool:
+        """Check if content satisfies a validation rule.
+        
+        Args:
+            content: The content to check
+            rule: The rule description
+            
+        Returns:
+            Boolean indicating if rule is satisfied
+        """
+        # Rule checking logic can be expanded based on specific requirements
+        keywords = rule.lower().split()
+        content_lower = content.lower()
+        
+        # Simple keyword matching for now
+        return any(keyword in content_lower for keyword in keywords)
+    
+    def _get_validation_summary(self) -> Dict[str, Any]:
+        """Get summary of validation results.
+        
+        Returns:
+            Dictionary containing validation summary
+        """
+        all_present = all(
+            result["present"] 
+            for result in self.validation_results.values()
+        )
+        all_valid = all(
+            result["valid"] 
+            for result in self.validation_results.values()
+        )
+        
+        return {
+            "valid": all_present and all_valid,
+            "components": self.validation_results,
+            "summary": {
+                "components_present": sum(
+                    1 for result in self.validation_results.values() 
+                    if result["present"]
+                ),
+                "components_valid": sum(
+                    1 for result in self.validation_results.values() 
+                    if result["valid"]
+                ),
+                "total_components": len(self.REACT_COMPONENTS)
             }
         }
-        
-    def validate_response(self, response: str) -> Dict[str, bool]:
-        """
-        Validate a ReACT response against defined rules.
-        
-        Args:
-            response: The agent's ReACT-formatted response
-            
-        Returns:
-            Dict[str, bool]: Validation results for each component
-        """
-        results = {}
-        for component, rules in self.validation_rules.items():
-            # Extract component content using regex pattern
-            pattern = rules['pattern']
-            match = re.search(pattern, response, re.DOTALL)
-            
-            if not match and rules['required']:
-                results[component] = False  # Require all components
-                continue
-                
-            if not match:
-                results[component] = True  # Optional component not present
-                continue
-                
-            content = match.group(0)
-            content = content.split(']', 1)[1].strip() if len(content.split(']')) > 1 else content.strip()
-            
-            # Validate content
-            word_count = len(content.split())
-            has_required_elements = all(
-                element.lower() in content.lower() 
-                for element in rules['required_elements']
-            )
-            
-            # More lenient validation
-            word_count_valid = (
-                word_count >= rules['min_words'] * 0.5 and  # Allow 50% less
-                word_count <= rules['max_words'] * 1.5      # Allow 50% more
-            )
-            results[component] = word_count_valid or has_required_elements  # Pass if either condition is met
-            
-        return results
-        
-    def get_validation_summary(self, results: Dict[str, bool]) -> str:
-        """
-        Generate a human-readable validation summary.
+    
+    def format_validation_results(self, results: Dict[str, Any]) -> str:
+        """Format validation results for display.
         
         Args:
-            results: Validation results from validate_response()
+            results: Validation results dictionary
             
         Returns:
-            str: Formatted validation summary
+            Formatted string of validation results
         """
-        summary = []
-        for component, passed in results.items():
-            status = "✅" if passed else "❌"
-            summary.append(f"{status} {component.title()}: {'Passed' if passed else 'Failed'}")
-            
-            if not passed:
-                rules = self.validation_rules[component]
-                summary.append(f"   Required elements: {', '.join(rules['required_elements'])}")
-                summary.append(f"   Word count range: {rules['min_words']}-{rules['max_words']}")
-                
-        return "\n".join(summary)
+        output = []
+        output.append("ReACT Validation Results:")
+        output.append("=" * 50)
         
-    def validate_tool_selection(self, thought_content: str, selected_tools: List[str]) -> bool:
-        """
-        Validate tool selection based on reasoning in thought component.
+        # Overall status
+        status = "✅ PASSED" if results["valid"] else "❌ FAILED"
+        output.append(f"Overall Status: {status}")
+        output.append("-" * 50)
         
-        Args:
-            thought_content: Content of the THOUGHT section
-            selected_tools: List of tools selected for use
-            
-        Returns:
-            bool: Whether tool selection is justified by reasoning
-        """
-        # Extract tool justification from thought content
-        tool_mentions = []
-        for tool in selected_tools:
-            # Look for explicit reasoning about tool selection
-            if tool.lower() in thought_content.lower():
-                surrounding_context = re.findall(
-                    f".{{50}}{tool}.{{50}}", 
-                    thought_content, 
-                    re.IGNORECASE
-                )
-                if surrounding_context:
-                    tool_mentions.append({
-                        'tool': tool,
-                        'context': surrounding_context[0]
-                    })
-                    
-        # More lenient validation - require justification for at least half of tools
-        justified_tools = sum(
-            'because' in mention['context'].lower() or
-            'reason' in mention['context'].lower() or
-            'need' in mention['context'].lower() or
-            'use' in mention['context'].lower() or
-            'using' in mention['context'].lower()
-            for mention in tool_mentions
-        )
-        return justified_tools >= len(selected_tools) / 2
+        # Component details
+        for component, result in results["components"].items():
+            present = "✓" if result["present"] else "✗"
+            valid = "✓" if result["valid"] else "✗"
+            output.append(f"{component}:")
+            output.append(f"  Present: {present}")
+            output.append(f"  Valid: {valid}")
         
-    def validate_optimization_reasoning(self, thought_content: str) -> bool:
-        """
-        Validate quantum optimization reasoning in thought component.
+        # Summary
+        output.append("-" * 50)
+        summary = results["summary"]
+        output.append("Summary:")
+        output.append(f"  Components Present: {summary['components_present']}/{summary['total_components']}")
+        output.append(f"  Components Valid: {summary['components_valid']}/{summary['total_components']}")
         
-        Args:
-            thought_content: Content of the THOUGHT section
-            
-        Returns:
-            bool: Whether optimization approach is properly reasoned
-        """
-        required_concepts = [
-            'qubo',
-            'qaoa',
-            'optimization',
-            'quantum',
-            'parameter'
-        ]
-        
-        # Check for presence of key concepts
-        concept_mentions = {
-            concept: concept.lower() in thought_content.lower()
-            for concept in required_concepts
-        }
-        
-        # More lenient validation - require only 2 out of 5 concepts
-        concepts_present = sum(concept_mentions.values())
-        has_sufficient_concepts = concepts_present >= 2
-        
-        # Validate relationships between concepts
-        has_optimization_flow = (
-            'convert' in thought_content.lower() or
-            'transform' in thought_content.lower() or
-            'formulate' in thought_content.lower() or
-            'optimize' in thought_content.lower() or
-            'schedule' in thought_content.lower()
-        )
-        
-        has_parameter_reasoning = (
-            'parameter' in thought_content.lower() or
-            'configuration' in thought_content.lower() or
-            'setting' in thought_content.lower()
-        )
-        
-        return has_sufficient_concepts or (has_optimization_flow and has_parameter_reasoning)
+        return "\n".join(output)

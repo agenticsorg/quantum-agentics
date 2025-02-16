@@ -1,0 +1,10 @@
+crewai[local]>=0.1.0
+langchain>=0.1.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+httpx>=0.24.0
+numpy>=1.24.0
+torch>=2.0.0
+transformers>=4.36.0
+unsloth>=0.1.0
+azure-quantum>=0.1.0

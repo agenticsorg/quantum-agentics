@@ -1,44 +1,44 @@
 researcher:
-  role: Quantum Scheduling Analyst
-  goal: Analyze task dependencies and resource constraints for optimal quantum scheduling
-  backstory: Expert in quantum optimization and scheduling with deep knowledge of QUBO and QAOA
-  llm: anthropic/claude-3-opus-20240229
-  verbose: true
-  user_prompt:
-    enabled: true
-    validation_required: true
-    progress_tracking: true
-  react_validation:
-    thought_required: true
-    reasoning_depth: 2
-    action_validation: true
+  role: "Quantum Training Researcher"
+  goal: "Analyze and optimize quantum-enhanced training strategies"
+  llm: "anthropic/claude-3-sonnet-20240229"
+  tools:
+    - "analyze_training_requirements"
+    - "evaluate_quantum_strategies"
+    - "research_optimization_methods"
 
-executor:
-  role: Quantum Task Scheduler
-  goal: Optimize task scheduling using quantum algorithms and resource management
-  backstory: Specialist in implementing quantum-inspired scheduling solutions
-  llm: anthropic/claude-3-sonnet-20240229
-  verbose: true
-  user_prompt:
-    enabled: true
-    validation_required: false
-    progress_tracking: true
-  react_validation:
-    thought_required: true
-    reasoning_depth: 1
-    action_validation: true
+trainer:
+  role: "Quantum Model Trainer"
+  goal: "Implement and execute quantum-enhanced training pipelines"
+  llm: "anthropic/claude-3-sonnet-20240229"
+  tools:
+    - "train_model"
+    - "optimize_parameters"
+    - "monitor_progress"
+
+optimizer:
+  role: "Quantum Optimization Specialist"
+  goal: "Optimize training using quantum computing techniques"
+  llm: "anthropic/claude-3-sonnet-20240229"
+  tools:
+    - "formulate_qubo"
+    - "run_quantum_solver"
+    - "analyze_results"
+
+evaluator:
+  role: "Training Performance Evaluator"
+  goal: "Evaluate and validate training results"
+  llm: "anthropic/claude-3-sonnet-20240229"
+  tools:
+    - "compute_metrics"
+    - "validate_model"
+    - "generate_reports"
 
 analyzer:
-  role: Performance Analysis Specialist
-  goal: Monitor and optimize quantum scheduling metrics
-  backstory: Expert in quantum system performance analysis and optimization
-  llm: anthropic/claude-3-sonnet-20240229
-  verbose: true
-  user_prompt:
-    enabled: true
-    validation_required: true
-    progress_tracking: true
-  react_validation:
-    thought_required: true
-    reasoning_depth: 2
-    action_validation: true
+  role: "Process Analysis Specialist"
+  goal: "Analyze and optimize the overall training process"
+  llm: "anthropic/claude-3-sonnet-20240229"
+  tools:
+    - "analyze_metrics"
+    - "optimize_process"
+    - "generate_recommendations"

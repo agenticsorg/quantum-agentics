@@ -1,68 +1,45 @@
 research_task:
   description: |
-    Analyze quantum scheduling requirements and constraints:
-    1. Evaluate task dependencies and resource requirements
-    2. Identify critical paths and bottlenecks
-    3. Propose optimization strategies using QUBO/QAOA
-    4. Consider cluster management implications
-    5. Document findings and recommendations
+    Analyze quantum training requirements and optimization strategies:
+    1. Evaluate model architecture and training data
+    2. Research quantum optimization techniques
+    3. Identify potential optimization points
+    4. Recommend training strategies
 
-execution_task:
+training_task:
   description: |
-    Implement quantum-optimized scheduling solution:
-    1. Configure QUBO parameters and constraints
-    2. Apply QAOA optimization with specified parameters
-    3. Manage resource allocation across clusters
-    4. Handle task dependencies and constraints
-    5. Validate scheduling decisions
-    6. Generate detailed execution report
+    Execute quantum-enhanced model training:
+    1. Initialize model and data pipeline
+    2. Configure training parameters
+    3. Implement training loop with quantum optimization
+    4. Monitor progress and adjust parameters
+    5. Save checkpoints and validate results
+
+optimization_task:
+  description: |
+    Optimize training using quantum computing:
+    1. Formulate QUBO problems for optimization
+    2. Configure quantum solver parameters
+    3. Execute quantum optimization
+    4. Analyze results and provide feedback
+    5. Adjust optimization strategy based on results
+
+evaluation_task:
+  description: |
+    Evaluate training performance and results:
+    1. Compute performance metrics
+    2. Validate model behavior
+    3. Compare with baselines
+    4. Generate detailed reports
+    5. Recommend improvements
 
 analysis_task:
   description: |
-    Evaluate quantum scheduling performance:
-    1. Monitor resource utilization metrics
-    2. Analyze scheduling efficiency
-    3. Track optimization convergence
-    4. Measure quantum advantage
-    5. Identify improvement opportunities
-    6. Generate performance insights
-
-sample_scheduling_problem:
-  tasks:
-    - id: "task1"
-      name: "Quantum Circuit Optimization"
-      duration: 3
-      resources: ["quantum_processor", "memory"]
-      dependencies: []
-    - id: "task2"
-      name: "Classical Pre-processing"
-      duration: 2
-      resources: ["cpu", "memory"]
-      dependencies: ["task1"]
-    - id: "task3"
-      name: "QAOA Parameter Optimization"
-      duration: 4
-      resources: ["quantum_processor", "gpu"]
-      dependencies: ["task2"]
-    - id: "task4"
-      name: "Result Analysis"
-      duration: 2
-      resources: ["cpu", "memory"]
-      dependencies: ["task3"]
-  resources:
-    quantum_processor:
-      capacity: 2
-      cost_per_unit: 10
-    cpu:
-      capacity: 4
-      cost_per_unit: 1
-    gpu:
-      capacity: 2
-      cost_per_unit: 5
-    memory:
-      capacity: 8
-      cost_per_unit: 2
-  constraints:
-    max_parallel_quantum_tasks: 2
-    max_total_cost: 100
-    deadline: 12
+    Analyze overall training process and metrics:
+    1. Review training metrics and logs
+    2. Compare against defined thresholds
+    3. Analyze performance trends
+    4. Identify bottlenecks and issues
+    5. Generate optimization recommendations
+    6. Document findings and insights
+    7. Propose process improvements

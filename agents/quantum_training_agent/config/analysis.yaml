@@ -1,86 +1,73 @@
-performance_metrics:
-  scheduling:
-    optimization_convergence:
-      threshold: 0.001
-      max_iterations: 1000
-      target_objective: -1000.0
-    resource_utilization:
-      min_target: 0.7
-      max_target: 0.9
-      balance_threshold: 0.1
-    timing_constraints:
-      max_makespan: 12
-      deadline_buffer: 0.2
-      critical_path_slack: 0.1
+metrics:
+  training:
+    loss_threshold: 0.01
+    convergence_rate: 0.001
+    max_epochs: 100
+    early_stopping_patience: 10
+    validation_frequency: 5
 
   quantum:
-    qaoa_parameters:
-      p_steps:
-        min: 2
-        max: 10
-        optimal_range: [3, 5]
-      learning_rate:
-        min: 0.01
-        max: 0.5
-        optimal_range: [0.1, 0.2]
-      convergence_threshold: 1e-6
+    optimization_frequency: 10
+    qubo_size_limit: 1000
+    solver_timeout: 300
+    min_improvement: 0.05
+    max_iterations: 1000
 
-  clustering:
-    size_thresholds:
-      min_cluster: 10
-      max_cluster: 100
-      split_threshold: 80
-    resource_density:
-      min: 0.3
-      max: 0.8
-      target: 0.6
+  performance:
+    gpu_utilization_target: 0.8
+    memory_limit: 0.9
+    batch_processing_time: 0.5
+    throughput_target: 100
 
-evaluation_rules:
-  - name: "Optimization Quality"
-    conditions:
-      - metric: "optimization_convergence.final_value"
-        operator: "<="
-        threshold: "${performance_metrics.scheduling.optimization_convergence.target_objective}"
-    actions:
-      - "Adjust QAOA parameters"
-      - "Increase iteration limit"
-      - "Refine QUBO formulation"
+thresholds:
+  model:
+    perplexity_threshold: 15.0
+    accuracy_minimum: 0.85
+    loss_improvement: 0.001
+    gradient_norm_max: 10.0
 
-  - name: "Resource Efficiency"
-    conditions:
-      - metric: "resource_utilization.average"
-        operator: ">="
-        threshold: "${performance_metrics.scheduling.resource_utilization.min_target}"
-      - metric: "resource_utilization.average"
-        operator: "<="
-        threshold: "${performance_metrics.scheduling.resource_utilization.max_target}"
-    actions:
-      - "Rebalance resource allocation"
-      - "Adjust cluster assignments"
-      - "Update resource weights"
-
-  - name: "Timing Compliance"
-    conditions:
-      - metric: "schedule_length"
-        operator: "<="
-        threshold: "${performance_metrics.scheduling.timing_constraints.max_makespan}"
-    actions:
-      - "Optimize critical path"
-      - "Adjust parallel execution"
-      - "Review dependency constraints"
-
-improvement_strategies:
   optimization:
-    - "Increase QAOA p-steps within optimal range"
-    - "Fine-tune learning rate based on convergence"
-    - "Implement adaptive parameter scheduling"
+    qubo_success_rate: 0.9
+    solution_quality: 0.8
+    convergence_threshold: 1e-6
+    max_retry_attempts: 3
+
+  resources:
+    max_gpu_memory: "16GB"
+    max_cpu_usage: 0.9
+    disk_space_required: "100GB"
+    network_bandwidth: "1GB/s"
+
+validation:
+  checks:
+    - model_convergence
+    - optimization_quality
+    - resource_utilization
+    - performance_metrics
+    - output_quality
+
+  criteria:
+    model_convergence:
+      - "Loss decreasing consistently"
+      - "Validation metrics improving"
+      - "Gradients within bounds"
     
-  resource_management:
-    - "Dynamic cluster size adjustment"
-    - "Predictive resource allocation"
-    - "Load balancing optimization"
+    optimization_quality:
+      - "QUBO solutions feasible"
+      - "Improvement over classical"
+      - "Consistent convergence"
     
-  scheduling:
-    - "Critical path compression"
-    - "Parallel task execution enhancement"
-    - "Dependency chain optimization"
+    resource_utilization:
+      - "GPU utilization optimal"
+      - "Memory usage within limits"
+      - "Disk I/O efficient"
+    
+    performance_metrics:
+      - "Training speed acceptable"
+      - "Batch processing efficient"
+      - "Resource scaling linear"
+    
+    output_quality:
+      - "Model outputs coherent"
+      - "Performance meets targets"
+      - "Error rates acceptable"
