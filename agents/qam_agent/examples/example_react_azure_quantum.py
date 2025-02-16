@@ -1,4 +1,24 @@
 #!/usr/bin/env python3
+"""
+Example of using ReACT with Azure Quantum optimization.
+
+To run this example, you need:
+1. Azure CLI installed and configured
+2. Azure Quantum workspace set up
+3. Environment variables set:
+   - AZURE_RESOURCE_GROUP: Your Azure resource group name
+   - AZURE_WORKSPACE_NAME: Your Azure Quantum workspace name
+   - AZURE_LOCATION: Azure region (e.g., 'westus')
+   - AZURE_SUBSCRIPTION_ID: Your Azure subscription ID
+   - AZURE_TARGET_ID: (Optional) Target quantum processor/simulator
+
+Example:
+    export AZURE_RESOURCE_GROUP="my-resource-group"
+    export AZURE_WORKSPACE_NAME="my-workspace"
+    export AZURE_LOCATION="westus"
+    export AZURE_SUBSCRIPTION_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    python example_react_azure_quantum.py
+"""
 import sys
 import os
 import json
@@ -110,13 +130,13 @@ def run_react_azure_quantum():
             "qaoa_learning_rate": 0.05,
             "optimization_target": 0.95
         },
-        # Replace these with your actual Azure Quantum workspace details
+        # Use environment variables for Azure Quantum workspace details
         "azure": {
-            "resource_group": "your-resource-group",
-            "workspace_name": "your-workspace-name",
-            "location": "your-location",
-            "subscription_id": "your-subscription-id",
-            "target_id": "microsoft.paralleltempering.cpu"
+            "resource_group": os.getenv("AZURE_RESOURCE_GROUP", ""),
+            "workspace_name": os.getenv("AZURE_WORKSPACE_NAME", ""),
+            "location": os.getenv("AZURE_LOCATION", ""),
+            "subscription_id": os.getenv("AZURE_SUBSCRIPTION_ID", ""),
+            "target_id": os.getenv("AZURE_TARGET_ID", "microsoft.paralleltempering.cpu")
         }
     }
     
@@ -126,7 +146,12 @@ def run_react_azure_quantum():
     
     # Check Azure CLI and setup
     if not check_azure_cli():
-        print("\n⚠️ Using local QAOA optimization instead of Azure Quantum")
+        print("\n⚠️ Azure CLI not found. Using local QAOA optimization instead.")
+        sample_config.pop('azure', None)
+    elif not all([sample_config['azure']['resource_group'], 
+                  sample_config['azure']['workspace_name'],
+                  sample_config['azure']['subscription_id']]):
+        print("\n⚠️ Azure Quantum credentials not found in environment variables. Using local QAOA optimization instead.")
         sample_config.pop('azure', None)
     
     # Create agent instance
