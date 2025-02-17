@@ -1,3 +1,5 @@
+![Quantum Agentics](assets/Quantum-agentics.png)
+
 # Quantum Agentics
 #### by rUv, cause he could.
 
