@@ -7,7 +7,7 @@ What if you could instantly see all the best solution to a complex reasoning pro
 
 Using **Azure Quantum**, this system leverages pure mathematical optimization and quantum principles to find the best way to distribute tasks among autonomous agents. Most people don't fully understand how quantum computing works, but in simple terms, it can represent and evaluate many possible task assignment at the same time, using **superposition** and **interference** to amplify the best solutions and discard bad ones. This makes it fundamentally different from other scheduling or learning-based approaches.
 
-What makes this novel is that instead of relying on trial-and-error learning, it directly **optimizes interconnected complexities**, relationships between agents, and reasoning structures—similar to **ReAct** ("Reasoning and Acting) in how it processes dependencies to find the optimal path.
+What makes this novel is that instead of relying on trial-and-error learning, it directly **optimizes interconnected complexities**, relationships between agents, and reasoning structures—similar to **ReAct** (Reasoning and Acting) in how it processes dependencies to find the optimal path.
 
 Imagine your training system is like a **super-smart assistant that can check millions of possible configurations at once.** By using quantum annealing, which quickly explores many potential solutions simultaneously, and mixing it with traditional computing methods that are reliable and well-understood, the system quickly finds the best settings for your model. 
 
